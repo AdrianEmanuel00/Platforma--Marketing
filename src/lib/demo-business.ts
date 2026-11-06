@@ -1,5 +1,5 @@
 // Contul demo „Afacere”: o firmă care își face singură social media (un singur brand).
-import type { AgentRun, Member, Post, Project, ResearchReport, Workspace } from "./types";
+import type { AgentRun, ContentSeries, Member, Post, Project, ResearchReport, Workspace } from "./types";
 
 export const businessWorkspace: Workspace = {
   id: "ws_iris",
@@ -50,6 +50,7 @@ export const businessPosts: Post[] = [
   {
     id: "bpost1",
     projectId: "p_iris",
+    seriesId: "bs_buchet",
     title: "Buchetul săptămânii: dalii de toamnă",
     status: "published",
     assetKind: "image",
@@ -64,6 +65,7 @@ export const businessPosts: Post[] = [
   {
     id: "bpost2",
     projectId: "p_iris",
+    seriesId: "bs_culise",
     title: "Reel: cum legăm un buchet în 30 de secunde",
     status: "published",
     assetKind: "video",
@@ -78,6 +80,7 @@ export const businessPosts: Post[] = [
   {
     id: "bpost3",
     projectId: "p_iris",
+    seriesId: "bs_birou",
     title: "Flori pentru birou, în fiecare luni",
     status: "scheduled",
     assetKind: "carousel",
@@ -104,6 +107,7 @@ export const businessPosts: Post[] = [
   {
     id: "bpost5",
     projectId: "p_iris",
+    seriesId: "bs_culise",
     title: "Din culise: florile ajung la 5 dimineața",
     status: "scheduled",
     assetKind: "video",
@@ -114,6 +118,7 @@ export const businessPosts: Post[] = [
   {
     id: "bpost6",
     projectId: "p_iris",
+    seriesId: "bs_ingrijire",
     title: "Ghid: cum ții trandafirii proaspeți o săptămână",
     status: "draft",
     assetKind: "carousel",
@@ -132,6 +137,103 @@ export const businessPosts: Post[] = [
       { platform: "instagram", caption: "Am deschis comenzile de Crăciun: aranjamente, coronițe și brăduți în ghiveci. Livrăm din 1 decembrie.", hashtags: ["#craciun", "#cluj"] },
       { platform: "facebook", caption: "Comenzile de Crăciun sunt deschise. Rezervă-ți aranjamentul din timp, locurile pentru livrare se ocupă repede.", hashtags: [] },
     ],
+  },
+];
+
+// Istoric mai vechi al seriei „Buchetul săptămânii”.
+businessPosts.push(
+  {
+    id: "bpost8",
+    projectId: "p_iris",
+    seriesId: "bs_buchet",
+    title: "Buchetul săptămânii: crizanteme și eucalipt",
+    status: "published",
+    assetKind: "image",
+    scheduledAt: "2026-10-27T10:00:00+02:00",
+    source: "calendar",
+    visualPrompt: "Autumn bouquet of bronze chrysanthemums and eucalyptus on a cream linen table, soft morning window light, top-down, palette #5B3E96 #FBF7F2 #8FA98B",
+    variants: [
+      { platform: "instagram", caption: "Crizanteme bronz și eucalipt. Toamna, într-un singur buchet. 🍂", hashtags: ["#florariairis", "#cluj"] },
+      { platform: "facebook", caption: "Buchetul săptămânii: crizanteme și eucalipt, aranjate de mână. Livrare azi.", hashtags: [] },
+    ],
+    metrics: { reach: 5120, likes: 388, comments: 22, shares: 9 },
+  },
+  {
+    id: "bpost9",
+    projectId: "p_iris",
+    seriesId: "bs_buchet",
+    title: "Buchetul săptămânii: ultimii trandafiri de grădină",
+    status: "published",
+    assetKind: "image",
+    scheduledAt: "2026-10-20T10:00:00+02:00",
+    source: "calendar",
+    visualPrompt: "Loose garden roses in blush and peach tones in a ceramic vase, cream background, natural side light, close-up texture, palette #F2B8A2 #FBF7F2",
+    variants: [
+      { platform: "instagram", caption: "Ultimii trandafiri din grădina furnizorului nostru. Până săptămâna viitoare nu mai sunt. 🌹", hashtags: ["#florariairis", "#trandafiri"] },
+      { platform: "facebook", caption: "Ultimii trandafiri de grădină ai sezonului, în buchetul săptămânii.", hashtags: [] },
+    ],
+    metrics: { reach: 7930, likes: 640, comments: 51, shares: 33 },
+  },
+);
+
+export const businessSeries: ContentSeries[] = [
+  {
+    id: "bs_buchet",
+    projectId: "p_iris",
+    name: "Buchetul săptămânii",
+    description: "În fiecare luni, buchetul cu florile de sezon ale săptămânii. Arată ce e proaspăt și creează obiceiul de a comanda.",
+    cadence: "în fiecare luni",
+    format: "image",
+    platforms: ["instagram", "facebook"],
+    visualGuide: "Buchetul pe fundal crem, lumină naturală de la fereastră, încadrare de sus sau la 45°, o singură floare dominantă.",
+    learnings: [
+      "Raritatea vinde: „ultimii trandafiri” a avut cel mai mare reach din serie (7.930).",
+      "Numele florii în titlu aduce mai multe comentarii decât descrierile generale.",
+      "Pe Facebook, „livrare azi” la final crește click-urile spre comandă.",
+    ],
+    nextIdeas: ["Buchetul săptămânii: amaryllis de iarnă", "Buchetul săptămânii: anemone și ramuri de brad"],
+    learnedAt: "2026-11-04T09:00:00+02:00",
+    createdAt: "2026-10-01T10:00:00+02:00",
+  },
+  {
+    id: "bs_culise",
+    projectId: "p_iris",
+    name: "Din culise",
+    description: "Ce nu vede clientul: livrarea de la 5 dimineața, legatul buchetelor, atelierul.",
+    cadence: "săptămânal",
+    format: "video",
+    platforms: ["tiktok", "instagram"],
+    visualGuide: "Vertical, fără muzică puternică, sunetul real al atelierului (foarfecă, hârtie), mâini în prim-plan.",
+    learnings: ["Sunetul real (ASMR) ține oamenii până la final: reel-ul cu legatul buchetului a avut 21.300 de oameni atinși."],
+    nextIdeas: ["Ambalăm o comandă de Crăciun, doar cu sunetul hârtiei"],
+    learnedAt: "2026-11-05T10:00:00+02:00",
+    createdAt: "2026-10-10T10:00:00+02:00",
+  },
+  {
+    id: "bs_birou",
+    projectId: "p_iris",
+    name: "Flori pentru birouri",
+    description: "Promovăm abonamentul de flori pentru birouri, cu clienți reali.",
+    cadence: "la 2 săptămâni",
+    format: "carousel",
+    platforms: ["facebook", "instagram", "linkedin"],
+    visualGuide: "Birouri luminoase, aranjamentul pe recepție sau pe masa de ședințe, oameni la lucru în fundal, neclari.",
+    learnings: [],
+    nextIdeas: [],
+    createdAt: "2026-11-01T10:00:00+02:00",
+  },
+  {
+    id: "bs_ingrijire",
+    projectId: "p_iris",
+    name: "Sfaturi de îngrijire",
+    description: "Cum ții florile proaspete mai mult. Util, scurt, de salvat.",
+    cadence: "la 2 săptămâni",
+    format: "carousel",
+    platforms: ["instagram"],
+    visualGuide: "Slide-uri crem cu titlu mare în Fraunces, o fotografie de aproape pe fiecare slide.",
+    learnings: [],
+    nextIdeas: [],
+    createdAt: "2026-11-02T10:00:00+02:00",
   },
 ];
 

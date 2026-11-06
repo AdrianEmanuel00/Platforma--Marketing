@@ -1,6 +1,7 @@
 // Date demo folosite până conectăm Supabase. Tot ce e aici va veni din baza de date.
 import type {
   AgentRun,
+  ContentSeries,
   Member,
   Post,
   Project,
@@ -111,6 +112,7 @@ export const posts: Post[] = [
   {
     id: "post1",
     projectId: "p_boabe",
+    seriesId: "s_ritual",
     title: "Ritualul de dimineață",
     status: "scheduled",
     assetKind: "carousel",
@@ -132,6 +134,7 @@ export const posts: Post[] = [
   {
     id: "post2",
     projectId: "p_boabe",
+    seriesId: "s_scoala",
     title: "Reel: cum prăjim boabele",
     status: "pending_approval",
     assetKind: "video",
@@ -186,6 +189,7 @@ export const posts: Post[] = [
   {
     id: "post5",
     projectId: "p_boabe",
+    seriesId: "s_scoala",
     title: "Flat white vs latte",
     status: "published",
     assetKind: "video",
@@ -199,6 +203,7 @@ export const posts: Post[] = [
   {
     id: "post6",
     projectId: "p_boabe",
+    seriesId: "s_ritual",
     title: "Weekend: brunch cu prietenii",
     status: "scheduled",
     assetKind: "image",
@@ -212,6 +217,7 @@ export const posts: Post[] = [
   {
     id: "post7",
     projectId: "p_fitzone",
+    seriesId: "s_30zile",
     title: "Provocarea de 30 de zile",
     status: "scheduled",
     assetKind: "video",
@@ -224,6 +230,7 @@ export const posts: Post[] = [
   {
     id: "post8",
     projectId: "p_lemn",
+    seriesId: "s_inainte",
     title: "Bucătărie din stejar: înainte și după",
     status: "pending_approval",
     assetKind: "carousel",
@@ -367,3 +374,67 @@ export function runsFor(projectId: string) {
 
 /** „Azi” în demo, ca ecranele să arate la fel indiferent când sunt deschise. */
 export const DEMO_TODAY = "2026-11-06";
+
+export const series: ContentSeries[] = [
+  {
+    id: "s_ritual",
+    projectId: "p_boabe",
+    name: "Ritualuri de cafea",
+    description: "Momente calme din cafenea: dimineața, weekendul, prietenii. Arată atmosfera, nu produsul.",
+    cadence: "de 2 ori pe săptămână",
+    format: "carousel",
+    platforms: ["instagram", "facebook"],
+    visualGuide: "Lumină caldă de dimineață, tonuri de cafea și crem, mâini și cești de aproape, fără oameni privind în cameră.",
+    learnings: [
+      "Prima frază merge cel mai bine ca întrebare despre rutina cititorului.",
+      "Caruselele cu 4 imagini au mai multe salvări decât cele cu 6.",
+      "Postările de la 8:00-9:00 prind cel mai mult reach dimineața.",
+    ],
+    nextIdeas: ["Ritualul de duminică: brunch lent", "Cana preferată a clienților noștri"],
+    learnedAt: "2026-11-05T21:00:00+02:00",
+    createdAt: "2026-10-01T10:00:00+02:00",
+  },
+  {
+    id: "s_scoala",
+    projectId: "p_boabe",
+    name: "Școala de cafea",
+    description: "Explicăm simplu lucruri despre cafea: băuturi, origini, prăjire. Educativ, fără snobism.",
+    cadence: "în fiecare joi",
+    format: "video",
+    platforms: ["instagram", "tiktok"],
+    visualGuide: "Cadre verticale de aproape pe espressor și boabe, text mare pe ecran cu fontul brandului, ritm rapid.",
+    learnings: [
+      "Comparațiile „X vs Y” aduc de 2× mai multe comentarii decât explicațiile simple.",
+      "Video-urile sub 20 de secunde sunt văzute până la capăt mai des.",
+    ],
+    nextIdeas: ["Cortado vs macchiato", "Ce înseamnă „prăjire medie”"],
+    learnedAt: "2026-11-04T19:00:00+02:00",
+    createdAt: "2026-10-05T10:00:00+02:00",
+  },
+  {
+    id: "s_30zile",
+    projectId: "p_fitzone",
+    name: "Provocarea de 30 de zile",
+    description: "Un exercițiu pe zi, cu progresul comunității.",
+    cadence: "zilnic",
+    format: "video",
+    platforms: ["instagram", "tiktok"],
+    visualGuide: "Sala cu lumină neon verde, antrenorul filmat din lateral, număr mare al zilei în colț.",
+    learnings: [],
+    nextIdeas: [],
+    createdAt: "2026-11-01T10:00:00+02:00",
+  },
+  {
+    id: "s_inainte",
+    projectId: "p_lemn",
+    name: "Înainte și după",
+    description: "Proiecte terminate, comparate cu spațiul inițial.",
+    cadence: "la fiecare proiect livrat",
+    format: "carousel",
+    platforms: ["instagram", "facebook", "linkedin"],
+    visualGuide: "Același unghi în ambele poze, lumină laterală, detaliu de textură a lemnului la final.",
+    learnings: [],
+    nextIdeas: [],
+    createdAt: "2026-10-20T10:00:00+02:00",
+  },
+];

@@ -1,3 +1,4 @@
+import { Logo } from "@/components/logo";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { authEnabled } from "@/lib/supabase/config";
@@ -17,10 +18,7 @@ export default function Home() {
   return (
     <main className="mx-auto flex min-h-screen max-w-5xl flex-col px-4 py-10 sm:px-6">
       <nav className="flex items-center justify-between">
-        <div className="flex items-center gap-2 font-semibold">
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent text-white">P</span>
-          Platforma Marketing
-        </div>
+        <Logo />
         <Link href="/login" className="btn-ghost">
           Intră în cont
         </Link>

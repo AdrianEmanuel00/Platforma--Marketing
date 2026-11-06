@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { APP_NAME } from "@/lib/brand";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin", "latin-ext"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Platforma Marketing",
+  title: APP_NAME,
   description: "Agenți AI pentru social media: creează, publică și urmărește trendurile.",
 };
 

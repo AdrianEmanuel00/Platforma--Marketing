@@ -31,13 +31,38 @@ const Output = z.object({
 
 export type CopywriterResult = z.infer<typeof Output>;
 
+export interface SeriesContext {
+  name: string;
+  description: string;
+  visualGuide: string;
+  learnings: string[];
+  /** Ultimele postări din serie, ca să nu se repete și să păstreze stilul. */
+  recent: { title: string; caption: string; visualPrompt?: string }[];
+}
+
+function seriesBlock(series: SeriesContext) {
+  return [
+    "",
+    `Postarea face parte din seria „${series.name}”: ${series.description}`,
+    series.visualGuide && `Ghidul vizual al seriei (păstrează-l în promptul vizual): ${series.visualGuide}`,
+    series.learnings.length > 0 && `Ce a mers până acum în serie:\n${series.learnings.map((l) => `- ${l}`).join("\n")}`,
+    series.recent.length > 0 &&
+      `Ultimele postări din serie (păstrează consecvența, dar nu repeta ideile sau formulările):\n${series.recent
+        .map((r) => `- ${r.title}: ${r.caption.slice(0, 200)}${r.visualPrompt ? ` [vizual: ${r.visualPrompt.slice(0, 160)}]` : ""}`)
+        .join("\n")}`,
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
 export async function runCopywriter(input: {
   project: Project;
   idea: string;
   format: AssetKind;
   platforms: Platform[];
+  series?: SeriesContext;
 }): Promise<CopywriterResult> {
-  const { project, idea, format, platforms } = input;
+  const { project, idea, format, platforms, series } = input;
 
   const response = await claude().beta.messages.parse({
     model: MODEL,
@@ -51,6 +76,7 @@ export async function runCopywriter(input: {
       "Pentru vizual scrii un prompt în engleză pentru un generator de imagini: subiect, compoziție, lumină, paleta brandului (dă culorile hex), fără logo-uri inventate.",
       "",
       brandContext(project),
+      series ? seriesBlock(series) : "",
     ].join("\n"),
     messages: [
       {

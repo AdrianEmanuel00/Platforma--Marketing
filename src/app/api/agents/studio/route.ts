@@ -13,13 +13,24 @@ const Body = z.object({
   format: z.enum(["image", "carousel", "video"]),
   platforms: z.array(z.enum(["instagram", "facebook", "tiktok", "linkedin", "youtube", "x"])).min(1),
   withImage: z.boolean().default(true),
+  series: z
+    .object({
+      name: z.string().max(120),
+      description: z.string().max(1000),
+      visualGuide: z.string().max(1000),
+      learnings: z.array(z.string().max(400)).max(12),
+      recent: z
+        .array(z.object({ title: z.string().max(200), caption: z.string().max(2000), visualPrompt: z.string().max(2000).optional() }))
+        .max(8),
+    })
+    .optional(),
 });
 
 // Studio: Copywriter scrie textele și promptul vizual, apoi Creative generează imaginea.
 export async function POST(req: Request) {
   const parsed = Body.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Cerere invalidă." }, { status: 400 });
-  const { project, idea, format, platforms, withImage } = parsed.data;
+  const { project, idea, format, platforms, withImage, series } = parsed.data;
 
   const keys = aiStatus();
   if (!keys.anthropic) {
@@ -27,7 +38,7 @@ export async function POST(req: Request) {
   }
 
   try {
-    const copy = await runCopywriter({ project, idea, format, platforms });
+    const copy = await runCopywriter({ project, idea, format, platforms, series });
     let image: { url: string; model: string } | null = null;
     let imageError: string | null = null;
     if (withImage) {

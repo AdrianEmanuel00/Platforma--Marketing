@@ -11,7 +11,9 @@ const editableStatuses: PostStatus[] = ["idea", "draft", "pending_approval", "ap
 
 /** Fereastra de editare a unei postări: text, status, dată, ștergere. */
 export function PostDialog({ post, project, onClose }: { post: Post; project: Project; onClose: () => void }) {
-  const { dispatch } = useStore();
+  const { state, dispatch } = useStore();
+  const projectSeries = state.series.filter((x) => x.projectId === project.id);
+  const [seriesId, setSeriesId] = useState(post.seriesId ?? "");
   const [title, setTitle] = useState(post.title);
   const [status, setStatus] = useState<PostStatus>(post.status);
   const [day, setDay] = useState(post.scheduledAt ? dayKey(post.scheduledAt) : "");
@@ -31,7 +33,13 @@ export function PostDialog({ post, project, onClose }: { post: Post; project: Pr
     dispatch({
       type: "updatePost",
       id: post.id,
-      patch: { title: title.trim() || post.title, status, variants, scheduledAt: day ? toIsoRo(day, time) : undefined },
+      patch: {
+        title: title.trim() || post.title,
+        status,
+        variants,
+        seriesId: seriesId || undefined,
+        scheduledAt: day ? toIsoRo(day, time) : undefined,
+      },
     });
     onClose();
   }
@@ -84,6 +92,25 @@ export function PostDialog({ post, project, onClose }: { post: Post; project: Pr
                 <input type="time" className="input" value={time} onChange={(e) => setTime(e.target.value)} />
               </label>
             </div>
+            {projectSeries.length > 0 && (
+              <label className="block text-sm">
+                <span className="mb-1 block font-medium">Seria</span>
+                <select className="input" value={seriesId} onChange={(e) => setSeriesId(e.target.value)}>
+                  <option value="">Fără serie</option>
+                  {projectSeries.map((x) => (
+                    <option key={x.id} value={x.id}>
+                      {x.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+            {post.visualPrompt && (
+              <details className="text-xs text-muted">
+                <summary className="cursor-pointer">Grafica folosită (prompt)</summary>
+                <p className="mt-1">{post.visualPrompt}</p>
+              </details>
+            )}
             {needsDate && !day && <p className="text-xs text-amber-700 dark:text-amber-400">Alege ziua ca să apară în calendar.</p>}
           </div>
         </div>
