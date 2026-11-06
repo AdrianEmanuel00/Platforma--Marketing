@@ -1,5 +1,8 @@
 export const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 export const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-/** Fără chei Supabase aplicația rulează în modul demo, pe datele din src/lib/demo-data.ts. */
-export const isDemoMode = !supabaseUrl || !supabaseAnonKey;
+/**
+ * Login-ul e oprit până îl pornim explicit (AUTH_ENABLED=true) și avem cheile Supabase.
+ * Până atunci aplicația se deschide direct, iar datele stau în browser.
+ */
+export const authEnabled = process.env.AUTH_ENABLED === "true" && !!supabaseUrl && !!supabaseAnonKey;

@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { isDemoMode } from "@/lib/supabase/config";
+import { authEnabled } from "@/lib/supabase/config";
 import { LoginForm } from "./login-form";
 
 export default function LoginPage() {
   // Până conectăm Supabase, nu există conturi: intri direct în aplicație.
-  if (isDemoMode) redirect("/app");
+  if (!authEnabled) redirect("/app");
 
   return (
     <main className="flex min-h-screen items-center justify-center px-4">
