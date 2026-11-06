@@ -1,10 +1,10 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-import { isDemoMode, supabaseAnonKey, supabaseUrl } from "@/lib/supabase/config";
+import { authEnabled, supabaseAnonKey, supabaseUrl } from "@/lib/supabase/config";
 
 // Reîmprospătează sesiunea Supabase și protejează /app. În modul demo lasă totul să treacă.
 export async function proxy(request: NextRequest) {
-  if (isDemoMode) return NextResponse.next();
+  if (!authEnabled) return NextResponse.next();
 
   let response = NextResponse.next({ request });
   const supabase = createServerClient(supabaseUrl!, supabaseAnonKey!, {
