@@ -1,0 +1,21 @@
+"use client";
+import { useCallback } from "react";
+import { useRouter } from "next/navigation";
+import { Sidebar } from "@/components/sidebar";
+import { StoreProvider } from "@/lib/store";
+
+export function AppShell({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
+  // Fără cont ales, trimitem la ecranul cu cele două conturi demo.
+  const onNoAccount = useCallback(() => router.replace("/login"), [router]);
+  return (
+    <StoreProvider onNoAccount={onNoAccount}>
+      <div className="flex min-h-screen flex-col md:flex-row">
+        <Sidebar />
+        <div className="flex min-w-0 flex-1 flex-col">
+          <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-8">{children}</main>
+        </div>
+      </div>
+    </StoreProvider>
+  );
+}

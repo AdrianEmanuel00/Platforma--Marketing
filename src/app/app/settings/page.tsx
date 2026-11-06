@@ -11,7 +11,8 @@ import type { Project } from "@/lib/types";
 const roleLabels = { owner: "Owner", admin: "Admin", editor: "Editor", viewer: "Viewer" };
 
 export default function SettingsPage() {
-  const { state, dispatch } = useStore();
+  const { state, dispatch, account } = useStore();
+  const isBusiness = account === "business";
   const { workspace, members, projects } = state;
   const status = useAgentsLive();
   const [confirmReset, setConfirmReset] = useState(false);
@@ -30,21 +31,11 @@ export default function SettingsPage() {
               onChange={(e) => dispatch({ type: "updateWorkspace", patch: { name: e.target.value } })}
             />
           </label>
-          <div className="text-sm">
-            <span className="mb-1.5 block font-medium">Tip</span>
-            <div className="grid grid-cols-2 gap-2">
-              {(["business", "agency"] as const).map((k) => (
-                <button
-                  key={k}
-                  onClick={() => dispatch({ type: "updateWorkspace", patch: { kind: k } })}
-                  className={`rounded-lg border p-2.5 text-left ${workspace.kind === k ? "border-accent bg-accent-soft" : "border-border"}`}
-                >
-                  <p className="font-medium">{k === "agency" ? "Agenție" : "Afacere"}</p>
-                  <p className="text-xs text-muted">{k === "agency" ? "Mai mulți clienți" : "Îmi gestionez singur brandul"}</p>
-                </button>
-              ))}
-            </div>
-          </div>
+          <p className="text-sm text-muted">
+            {isBusiness
+              ? "Cont de afacere: un singur brand, pe care îl gestionezi tu."
+              : "Cont de agenție: fiecare client are proiectul lui."}
+          </p>
         </section>
 
         <section className="card p-5">
@@ -73,10 +64,10 @@ export default function SettingsPage() {
         </section>
 
         <section className="card p-5 lg:col-span-2">
-          <h2 className="mb-3 font-semibold">Clienți</h2>
+          <h2 className="mb-3 font-semibold">{isBusiness ? "Afacerea ta" : "Clienți"}</h2>
           <div className="space-y-3">
             {projects.map((p) => (
-              <ProjectRow key={p.id} project={p} />
+              <ProjectRow key={p.id} project={p} canDelete={!isBusiness} />
             ))}
           </div>
         </section>
@@ -107,14 +98,14 @@ export default function SettingsPage() {
         <section className="card p-5">
           <h2 className="mb-1 font-semibold">Datele aplicației</h2>
           <p className="mb-4 text-sm text-muted">
-            Deocamdată totul se salvează în acest browser. Poți reveni oricând la clienții de exemplu.
+            Deocamdată totul se salvează în acest browser. Poți reveni oricând la datele de exemplu ale contului.
           </p>
           {confirmReset ? (
             <div className="flex items-center gap-2 text-sm">
               Ștergi tot ce ai adăugat?
               <button
                 onClick={() => {
-                  dispatch({ type: "reset" });
+                  dispatch({ type: "reset", account });
                   setConfirmReset(false);
                 }}
                 className="btn-ghost px-2.5 py-1 text-red-600"
@@ -136,7 +127,7 @@ export default function SettingsPage() {
   );
 }
 
-function ProjectRow({ project }: { project: Project }) {
+function ProjectRow({ project, canDelete }: { project: Project; canDelete: boolean }) {
   const { dispatch } = useStore();
   const [confirm, setConfirm] = useState(false);
   const update = (patch: Partial<Project>) => dispatch({ type: "updateProject", id: project.id, patch });
@@ -154,7 +145,7 @@ function ProjectRow({ project }: { project: Project }) {
           Pilot automat (agenții programează fără aprobare)
         </label>
         <div className="ml-auto">
-          {confirm ? (
+          {!canDelete ? null : confirm ? (
             <span className="flex items-center gap-2">
               Ștergi clientul și postările lui?
               <button onClick={() => dispatch({ type: "deleteProject", id: project.id })} className="btn-ghost px-2.5 py-1 text-red-600">

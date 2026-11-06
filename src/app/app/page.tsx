@@ -1,12 +1,21 @@
 "use client";
+import { useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
 import { PlatformIcon } from "@/components/badges";
 import { PageHeader } from "@/components/page-header";
 import { useStore } from "@/lib/store";
 
 export default function ClientsPage() {
-  const { state } = useStore();
+  const { state, account } = useStore();
+  const router = useRouter();
+  const own = account === "business" ? state.projects[0] : undefined;
+  // O afacere nu are listă de clienți: intră direct în dashboard-ul brandului ei.
+  useEffect(() => {
+    if (own) router.replace(`/app/${own.slug}`);
+  }, [own, router]);
+  if (account === "business") return <div className="h-40 animate-pulse rounded-xl bg-surface-2" />;
 
   return (
     <>
