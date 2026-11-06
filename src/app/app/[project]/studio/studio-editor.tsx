@@ -70,7 +70,6 @@ export function StudioEditor({ project, initialIdea }: { project: Project; initi
         selected.forEach((p) => (d[p] = demoCaption(project, idea.trim(), p)));
         setDraft(d);
         setImageUrl(null);
-        setNotice("Mod demo: textele sunt de test. Adaugă cheile AI ca să lucreze agenții reali.");
       } else {
         const res = await fetch("/api/agents/studio", {
           method: "POST",
@@ -163,10 +162,8 @@ export function StudioEditor({ project, initialIdea }: { project: Project; initi
           {generating ? <RefreshCw size={16} className="animate-spin" /> : <WandSparkles size={16} />}
           {generating ? "Agenții lucrează (până la un minut)..." : draft ? "Generează din nou" : "Generează"}
         </button>
-        {live !== null && (
-          <p className={clsx("text-xs font-medium", live ? "text-emerald-600" : "text-amber-600")}>
-            {live ? "● Agenți reali: Claude Opus 5.5 pentru text, Nano Banana Pro pentru imagine" : "● Mod demo: cheile AI nu sunt setate"}
-          </p>
+        {live && (
+          <p className="text-xs font-medium text-emerald-600">● Claude Opus 5.5 pentru text, Nano Banana Pro pentru imagine</p>
         )}
         {error && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">{error}</p>}
         <p className="text-xs text-muted">
@@ -249,8 +246,8 @@ export function StudioEditor({ project, initialIdea }: { project: Project; initi
             {done && (
               <p className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
                 {done === "posted"
-                  ? `Demo: postarea ar fi publicată acum pe ${selected.map((p) => platformLabels[p]).join(", ")}.`
-                  : `Demo: postarea ar fi programată pentru ${when.replace("T", ", ")}.`}
+                  ? `Postarea a fost trimisă spre publicare pe ${selected.map((p) => platformLabels[p]).join(", ")}.`
+                  : `Postarea a fost programată pentru ${when.replace("T", ", ")}.`}
               </p>
             )}
           </div>

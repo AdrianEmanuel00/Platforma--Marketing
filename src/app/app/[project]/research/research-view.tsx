@@ -57,11 +57,11 @@ export function ResearchView({ project, initial }: { project: Project; initial?:
       title="Research"
       description={
         report
-          ? `${isLive ? "Raport generat acum" : "Raport demo"} din ${formatDate(report.date)}. Agentul urmărește ${project.competitors.length} competitori și trendurile din ${project.industry.toLowerCase()}.`
+          ? `${isLive ? "Raport generat acum" : "Raportul"} din ${formatDate(report.date)}. Agentul urmărește ${project.competitors.length} competitori și trendurile din ${project.industry.toLowerCase()}.`
           : "Încă nu există un raport."
       }
       actions={
-        <button onClick={run} disabled={running || !live} className="btn-primary" title={live ? "" : "Cheile AI nu sunt setate"}>
+        <button onClick={run} disabled={running || live === false} className="btn-primary" title={live ? "" : "Cheile AI nu sunt setate"}>
           {running ? <RefreshCw size={16} className="animate-spin" /> : <Radar size={16} />}
           {running ? "Caută pe web (1-3 minute)..." : "Rulează research acum"}
         </button>
@@ -71,9 +71,6 @@ export function ResearchView({ project, initial }: { project: Project; initial?:
 
   const notices = (
     <>
-      {live === false && (
-        <p className="mb-4 text-xs font-medium text-amber-600">● Mod demo: adaugă ANTHROPIC_API_KEY ca agentul să caute pe web.</p>
-      )}
       {error && <p className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">{error}</p>}
     </>
   );
