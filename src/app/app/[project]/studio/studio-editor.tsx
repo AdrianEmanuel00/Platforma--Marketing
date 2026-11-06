@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import clsx from "clsx";
 import { CalendarClock, Check, Film, Images, Image as ImageIcon, RefreshCw, Send, WandSparkles } from "lucide-react";
 import { AssetPreview } from "@/components/asset-preview";
@@ -15,7 +15,7 @@ const formats: { id: AssetKind; label: string; icon: typeof ImageIcon }[] = [
 
 type Draft = Partial<Record<Platform, string>>;
 
-// Demo: în versiunea reală, „Generează” pornește agenții Copywriter și Creative printr-un job în fundal.
+// Folosit doar când cheile AI nu sunt setate (modul demo).
 function demoCaption(project: Project, idea: string, platform: Platform) {
   const tag = `#${project.slug.replace(/-/g, "")}`;
   switch (platform) {
@@ -41,21 +41,59 @@ export function StudioEditor({ project, initialIdea }: { project: Project; initi
   const [active, setActive] = useState<Platform | null>(null);
   const [done, setDone] = useState<"" | "posted" | "scheduled">("");
   const [when, setWhen] = useState("2026-11-07T10:00");
+  const [live, setLive] = useState<boolean | null>(null);
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [visualPrompt, setVisualPrompt] = useState("");
+  const [notice, setNotice] = useState("");
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    fetch("/api/agents/status")
+      .then((r) => r.json())
+      .then((s: { anthropic: boolean }) => setLive(s.anthropic))
+      .catch(() => setLive(false));
+  }, []);
 
   function toggle(p: Platform) {
     setSelected((s) => (s.includes(p) ? s.filter((x) => x !== p) : [...s, p]));
   }
 
-  function generate() {
+  async function generate() {
     setGenerating(true);
     setDone("");
-    setTimeout(() => {
-      const d: Draft = {};
-      selected.forEach((p) => (d[p] = demoCaption(project, idea.trim(), p)));
-      setDraft(d);
+    setError("");
+    setNotice("");
+    try {
+      if (!live) {
+        await new Promise((r) => setTimeout(r, 700));
+        const d: Draft = {};
+        selected.forEach((p) => (d[p] = demoCaption(project, idea.trim(), p)));
+        setDraft(d);
+        setImageUrl(null);
+        setNotice("Mod demo: textele sunt de test. Adaugă cheile AI ca să lucreze agenții reali.");
+      } else {
+        const res = await fetch("/api/agents/studio", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ projectSlug: project.slug, idea: idea.trim(), format, platforms: selected }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error ?? "Agentul a eșuat.");
+        const d: Draft = {};
+        for (const v of data.variants as { platform: Platform; caption: string; hashtags: string[] }[]) {
+          d[v.platform] = v.hashtags.length ? `${v.caption}\n\n${v.hashtags.join(" ")}` : v.caption;
+        }
+        setDraft(d);
+        setImageUrl(data.image?.url ?? null);
+        setVisualPrompt(data.visualPrompt ?? "");
+        if (data.imageError) setNotice(data.imageError);
+      }
       setActive(selected[0] ?? null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Ceva n-a mers.");
+    } finally {
       setGenerating(false);
-    }, 900);
+    }
   }
 
   const shown = active && draft?.[active] !== undefined ? active : selected.find((p) => draft?.[p] !== undefined);
@@ -123,8 +161,14 @@ export function StudioEditor({ project, initialIdea }: { project: Project; initi
           className="btn-primary w-full"
         >
           {generating ? <RefreshCw size={16} className="animate-spin" /> : <WandSparkles size={16} />}
-          {generating ? "Agenții lucrează..." : draft ? "Generează din nou" : "Generează"}
+          {generating ? "Agenții lucrează (până la un minut)..." : draft ? "Generează din nou" : "Generează"}
         </button>
+        {live !== null && (
+          <p className={clsx("text-xs font-medium", live ? "text-emerald-600" : "text-amber-600")}>
+            {live ? "● Agenți reali: Claude Opus 5.5 pentru text, Nano Banana Pro pentru imagine" : "● Mod demo: cheile AI nu sunt setate"}
+          </p>
+        )}
+        {error && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">{error}</p>}
         <p className="text-xs text-muted">
           Folosește identitatea „{project.brand.logoText}”: ton {project.brand.voice.split(",")[0].toLowerCase()}, culorile și
           fonturile brandului.
@@ -158,7 +202,12 @@ export function StudioEditor({ project, initialIdea }: { project: Project; initi
 
             {shown && (
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <AssetPreview brand={project.brand} kind={format} title={idea} />
+                {imageUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={imageUrl} alt={idea} className="w-full rounded-lg object-cover" />
+                ) : (
+                  <AssetPreview brand={project.brand} kind={format} title={idea} />
+                )}
                 <div className="flex flex-col gap-2">
                   <label htmlFor="caption" className="text-sm font-medium">
                     Text pentru {platformLabels[shown]}
@@ -169,9 +218,12 @@ export function StudioEditor({ project, initialIdea }: { project: Project; initi
                     onChange={(e) => setDraft({ ...draft, [shown]: e.target.value })}
                     className="input min-h-40 flex-1 resize-none"
                   />
-                  <button className="btn-ghost text-xs">
-                    <RefreshCw size={14} /> Regenerează vizualul cu instrucțiuni
-                  </button>
+                  {visualPrompt && (
+                    <details className="text-xs text-muted">
+                      <summary className="cursor-pointer">Promptul vizual scris de Copywriter</summary>
+                      <p className="mt-1">{visualPrompt}</p>
+                    </details>
+                  )}
                 </div>
               </div>
             )}
@@ -193,6 +245,7 @@ export function StudioEditor({ project, initialIdea }: { project: Project; initi
                 <Send size={16} /> Postează acum
               </button>
             </div>
+            {notice && <p className="text-xs text-amber-700 dark:text-amber-400">{notice}</p>}
             {done && (
               <p className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
                 {done === "posted"
