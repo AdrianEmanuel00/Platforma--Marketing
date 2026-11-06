@@ -28,7 +28,7 @@ export const agents: AgentDefinition[] = [
     name: "Creative",
     tagline: "Imagini, carusele și video în identitatea brandului",
     stage: "mvp",
-    primary: { provider: "fal", model: "gpt-image" },
+    primary: { provider: "fal", model: "fal-ai/nano-banana-pro" },
     fallback: { provider: "fal", model: "flux" },
   },
   {

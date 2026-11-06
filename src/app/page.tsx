@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { isDemoMode } from "@/lib/supabase/config";
 import { Palette, Radar, Send, WandSparkles } from "lucide-react";
 
 const features = [
@@ -9,6 +11,9 @@ const features = [
 ];
 
 export default function Home() {
+  // Fără conturi încă, pagina principală deschide direct aplicația.
+  if (isDemoMode) redirect("/app");
+
   return (
     <main className="mx-auto flex min-h-screen max-w-5xl flex-col px-4 py-10 sm:px-6">
       <nav className="flex items-center justify-between">
@@ -34,7 +39,7 @@ export default function Home() {
         </p>
         <div className="mt-8 flex justify-center gap-3">
           <Link href="/app" className="btn-primary">
-            Deschide demo-ul
+            Intră în aplicație
           </Link>
           <Link href="/login" className="btn-ghost">
             Creează cont

@@ -24,6 +24,17 @@ Deschide http://localhost:3000. Fără chei Supabase, aplicația rulează în **
 | `src/proxy.ts` | Reîmprospătează sesiunea și protejează `/app` |
 | `supabase/migrations` | Schema bazei de date, cu Row Level Security |
 
+## Agenții reali
+
+Fără chei, agenții răspund cu date demo. Cu chei, în Studio și Research lucrează modelele reale:
+
+| Variabilă | Ce pornește | De unde o iei |
+| --- | --- | --- |
+| `ANTHROPIC_API_KEY` | Copywriter și Research (Claude Opus 5.5, cu căutare pe web) | [console.anthropic.com](https://console.anthropic.com/settings/keys) |
+| `FAL_KEY` | Creative: imaginea postării (Nano Banana Pro) | [fal.ai/dashboard/keys](https://fal.ai/dashboard/keys) |
+
+Local le pui în `.env.local`; pe Vercel, în Settings → Environment Variables, apoi Redeploy.
+
 ## Conectarea Supabase
 
 1. Creează un proiect gratuit pe [supabase.com](https://supabase.com).

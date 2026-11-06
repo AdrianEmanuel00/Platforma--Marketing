@@ -1,8 +1,12 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { isDemoMode } from "@/lib/supabase/config";
 import { LoginForm } from "./login-form";
 
 export default function LoginPage() {
+  // Până conectăm Supabase, nu există conturi: intri direct în aplicație.
+  if (isDemoMode) redirect("/app");
+
   return (
     <main className="flex min-h-screen items-center justify-center px-4">
       <div className="card w-full max-w-sm p-6">
@@ -12,18 +16,7 @@ export default function LoginPage() {
         </Link>
         <h1 className="text-xl font-semibold">Intră în cont</h1>
         <p className="mt-1 text-sm text-muted">Îți trimitem un link pe email, fără parolă.</p>
-        {isDemoMode ? (
-          <div className="mt-6 space-y-3">
-            <p className="rounded-lg bg-accent-soft p-3 text-sm text-accent">
-              Mod demo: Supabase nu e conectat încă, așa că intri direct pe datele de test.
-            </p>
-            <Link href="/app" className="btn-primary w-full">
-              Intră în demo
-            </Link>
-          </div>
-        ) : (
-          <LoginForm />
-        )}
+        <LoginForm />
       </div>
     </main>
   );
