@@ -81,6 +81,10 @@ export interface Post {
   source: "research" | "calendar" | "manual";
   /** Imaginea generată de agentul Creative. */
   imageUrl?: string;
+  /** Promptul vizual folosit pentru grafică (ca seria să-și amintească stilul). */
+  visualPrompt?: string;
+  /** Seria de conținut din care face parte. */
+  seriesId?: string;
   metrics?: { reach: number; likes: number; comments: number; shares: number };
 }
 
@@ -104,6 +108,7 @@ export interface ResearchReport {
 }
 
 export type AgentId =
+  | "series"
   | "brand"
   | "creative"
   | "copywriter"
@@ -121,4 +126,24 @@ export interface AgentRun {
   summary: string;
   startedAt: string;
   costUsd: number;
+}
+
+/** O serie de conținut: o temă recurentă a brandului, cu agentul ei care învață din istoric. */
+export interface ContentSeries {
+  id: string;
+  projectId: string;
+  name: string;
+  description: string;
+  /** Cât de des apare, în cuvinte (ex.: „în fiecare luni”). */
+  cadence: string;
+  format: AssetKind;
+  platforms: Platform[];
+  /** Ghidul vizual al seriei: cum arată grafica de fiecare dată. */
+  visualGuide: string;
+  /** Ce a învățat agentul seriei din postările de până acum. */
+  learnings: string[];
+  /** Idei propuse de agent pentru următoarele postări. */
+  nextIdeas: string[];
+  learnedAt?: string;
+  createdAt: string;
 }

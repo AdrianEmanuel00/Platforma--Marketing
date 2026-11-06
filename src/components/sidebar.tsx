@@ -12,14 +12,17 @@ import {
   Palette,
   Plug,
   Radar,
+  Repeat,
   Settings,
   WandSparkles,
 } from "lucide-react";
+import { LogoMark } from "@/components/logo";
 import { chooseAccount, useStore } from "@/lib/store";
 
 const projectNav = [
   { href: "", label: "Dashboard", icon: LayoutDashboard },
   { href: "/studio", label: "Studio de conținut", icon: WandSparkles },
+  { href: "/series", label: "Serii de conținut", icon: Repeat },
   { href: "/calendar", label: "Calendar", icon: CalendarDays },
   { href: "/research", label: "Research", icon: Radar },
   { href: "/brand", label: "Identitate de brand", icon: Palette },
@@ -67,9 +70,7 @@ export function Sidebar() {
   return (
     <aside className="flex w-full shrink-0 flex-col gap-6 bg-sidebar p-4 md:sticky md:top-0 md:h-screen md:w-64">
       <div className="flex items-center gap-2 px-1">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent font-bold text-white">
-          P
-        </div>
+        <LogoMark />
         <div className="leading-tight">
           <p className="text-sm font-semibold text-white">{workspace.name}</p>
           <p className="text-xs text-sidebar-fg">

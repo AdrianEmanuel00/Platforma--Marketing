@@ -40,6 +40,13 @@ export const agents: AgentDefinition[] = [
     fallback: { provider: "anthropic", model: "claude-sonnet-5-5" },
   },
   {
+    id: "series",
+    name: "Agentul seriei",
+    tagline: "Învață din istoricul fiecărei serii ce merge și propune următoarele postări",
+    stage: "mvp",
+    primary: { provider: "anthropic", model: "claude-opus-5-5" },
+  },
+  {
     id: "publisher",
     name: "Postare",
     tagline: "Publică sau programează pe platformele alese",

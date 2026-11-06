@@ -26,7 +26,7 @@ export default function StudioPage() {
 
 function Studio() {
   const { project, hydrated } = useCurrentProject();
-  const { report } = useProjectData(project?.id);
+  const { report, series } = useProjectData(project?.id);
   const sp = useSearchParams();
   if (!project) return <ProjectMissing hydrated={hydrated} />;
 
@@ -44,13 +44,16 @@ function Studio() {
     };
   }
   const date = sp.get("date");
+  const seriesId = sp.get("series");
+  const fromSeries = series.find((x) => x.id === seriesId);
 
   return (
     <StudioEditor
-      key={`${project.id}-${idea?.title ?? "new"}-${date ?? ""}`}
+      key={`${project.id}-${idea?.title ?? "new"}-${date ?? ""}-${fromSeries?.id ?? ""}`}
       project={project}
       initialIdea={idea}
       initialDate={date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : undefined}
+      initialSeriesId={fromSeries?.id}
     />
   );
 }

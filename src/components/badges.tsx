@@ -1,28 +1,48 @@
 import clsx from "clsx";
 import { platformLabels, statusLabels } from "@/lib/format";
+import { platformGlyphs } from "@/lib/platform-glyphs";
 import type { Platform, PostStatus } from "@/lib/types";
 
-const platformStyle: Record<Platform, { short: string; className: string }> = {
-  instagram: { short: "IG", className: "bg-gradient-to-br from-amber-400 via-pink-500 to-purple-600 text-white" },
-  facebook: { short: "FB", className: "bg-blue-600 text-white" },
-  tiktok: { short: "TT", className: "bg-black text-white ring-1 ring-cyan-400" },
-  linkedin: { short: "in", className: "bg-sky-700 text-white" },
-  youtube: { short: "YT", className: "bg-red-600 text-white" },
-  x: { short: "X", className: "bg-neutral-900 text-white" },
+const platformBg: Record<Platform, string> = {
+  instagram: "bg-[radial-gradient(circle_at_30%_107%,#fdf497_0%,#fd5949_45%,#d6249f_60%,#285AEB_90%)]",
+  facebook: "bg-[#0866FF]",
+  tiktok: "bg-black",
+  linkedin: "bg-[#0A66C2]",
+  youtube: "bg-[#FF0000]",
+  x: "bg-black",
 };
 
+function Glyph({ platform }: { platform: Platform }) {
+  if (platform === "linkedin") {
+    // „in”: punct, bară și n, desenate simplu
+    return (
+      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden className="h-[62%] w-[62%]">
+        <circle cx="5" cy="4.5" r="2.4" />
+        <rect x="2.9" y="8.4" width="4.2" height="13" rx="0.6" />
+        <path d="M9.6 8.4h4v1.9c.7-1.2 2.2-2.2 4.3-2.2 3.4 0 4.6 2.1 4.6 5.6v7.7h-4.2v-6.9c0-1.7-.4-2.9-2-2.9-1.7 0-2.5 1.2-2.5 3v6.8H9.6z" />
+      </svg>
+    );
+  }
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden className="h-[58%] w-[58%]">
+      <path d={platformGlyphs[platform]} />
+    </svg>
+  );
+}
+
 export function PlatformIcon({ platform, size = "md" }: { platform: Platform; size?: "sm" | "md" }) {
-  const s = platformStyle[platform];
   return (
     <span
       title={platformLabels[platform]}
+      role="img"
+      aria-label={platformLabels[platform]}
       className={clsx(
-        "inline-flex shrink-0 items-center justify-center rounded-md font-semibold",
-        size === "sm" ? "h-5 w-5 text-[9px]" : "h-7 w-7 text-[11px]",
-        s.className,
+        "inline-flex shrink-0 items-center justify-center text-white",
+        size === "sm" ? "h-5 w-5 rounded-[5px]" : "h-7 w-7 rounded-md",
+        platformBg[platform],
       )}
     >
-      {s.short}
+      <Glyph platform={platform} />
     </span>
   );
 }

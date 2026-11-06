@@ -5,7 +5,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useState } from "react";
 import * as seed from "./demo-data";
 import * as biz from "./demo-business";
-import type { AgentRun, Member, Platform, Post, Project, ResearchReport, Workspace } from "./types";
+import type { AgentRun, ContentSeries, Member, Platform, Post, Project, ResearchReport, Workspace } from "./types";
 
 export interface AppState {
   version: 1;
@@ -15,6 +15,7 @@ export interface AppState {
   posts: Post[];
   reports: ResearchReport[];
   runs: AgentRun[];
+  series: ContentSeries[];
 }
 
 /** Cele două conturi demo: o agenție cu mai mulți clienți și o afacere care își face singură social media. */
@@ -32,6 +33,7 @@ function seedState(account: AccountId): AppState {
       posts: biz.businessPosts,
       reports: biz.businessReports,
       runs: biz.businessRuns,
+      series: biz.businessSeries,
     };
   }
   return {
@@ -42,6 +44,7 @@ function seedState(account: AccountId): AppState {
     posts: seed.posts,
     reports: seed.researchReports,
     runs: seed.agentRuns,
+    series: seed.series,
   };
 }
 
@@ -75,7 +78,10 @@ type Action =
   | { type: "updatePost"; id: string; patch: Partial<Post> }
   | { type: "deletePost"; id: string }
   | { type: "addReport"; report: ResearchReport }
-  | { type: "addRun"; run: AgentRun };
+  | { type: "addRun"; run: AgentRun }
+  | { type: "addSeries"; series: ContentSeries }
+  | { type: "updateSeries"; id: string; patch: Partial<ContentSeries> }
+  | { type: "deleteSeries"; id: string };
 
 function reducer(state: AppState, action: Action): AppState {
   switch (action.type) {
@@ -99,6 +105,7 @@ function reducer(state: AppState, action: Action): AppState {
         posts: state.posts.filter((p) => p.projectId !== action.id),
         reports: state.reports.filter((r) => r.projectId !== action.id),
         runs: state.runs.filter((r) => r.projectId !== action.id),
+        series: state.series.filter((r) => r.projectId !== action.id),
       };
     case "toggleConnection":
       return {
@@ -124,6 +131,16 @@ function reducer(state: AppState, action: Action): AppState {
       return { ...state, reports: [action.report, ...state.reports] };
     case "addRun":
       return { ...state, runs: [action.run, ...state.runs].slice(0, 200) };
+    case "addSeries":
+      return { ...state, series: [...state.series, action.series] };
+    case "updateSeries":
+      return { ...state, series: state.series.map((x) => (x.id === action.id ? { ...x, ...action.patch } : x)) };
+    case "deleteSeries":
+      return {
+        ...state,
+        series: state.series.filter((x) => x.id !== action.id),
+        posts: state.posts.map((p) => (p.seriesId === action.id ? { ...p, seriesId: undefined } : p)),
+      };
   }
 }
 
@@ -155,7 +172,16 @@ export function StoreProvider({ children, onNoAccount }: { children: React.React
       const raw = localStorage.getItem(storageKey(acc));
       if (raw) {
         const saved = JSON.parse(raw) as AppState;
-        if (saved?.version === 1 && Array.isArray(saved.projects)) dispatch({ type: "load", state: saved });
+        if (saved?.version === 1 && Array.isArray(saved.projects)) {
+          // Datele salvate înainte de serii primesc seriile de exemplu ale contului.
+          if (!Array.isArray(saved.series)) {
+            const fresh = seedState(acc);
+            const seriesOf = new Map(fresh.posts.map((p) => [p.id, p.seriesId]));
+            saved.series = fresh.series;
+            saved.posts = saved.posts.map((p) => (p.seriesId || !seriesOf.get(p.id) ? p : { ...p, seriesId: seriesOf.get(p.id) }));
+          }
+          dispatch({ type: "load", state: saved });
+        }
       }
     } catch {
       // Stocare indisponibilă (fereastră privată etc.): rămânem pe datele inițiale.
@@ -197,8 +223,9 @@ export function useProjectData(projectId: string | undefined) {
       posts: state.posts.filter((p) => p.projectId === projectId),
       report: state.reports.find((r) => r.projectId === projectId),
       runs: state.runs.filter((r) => r.projectId === projectId),
+      series: state.series.filter((r) => r.projectId === projectId),
     }),
-    [state.posts, state.reports, state.runs, projectId],
+    [state.posts, state.reports, state.runs, state.series, projectId],
   );
 }
 
