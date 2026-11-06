@@ -1,32 +1,40 @@
+"use client";
+import { useState } from "react";
 import Link from "next/link";
-import { ArrowRight, Loader2, WandSparkles } from "lucide-react";
+import { ArrowRight, Check, Loader2, WandSparkles } from "lucide-react";
 import { AssetPreview } from "@/components/asset-preview";
 import { PlatformIcon, StatusBadge } from "@/components/badges";
 import { PageHeader } from "@/components/page-header";
+import { PostDialog } from "@/components/post-dialog";
+import { ProjectMissing, useCurrentProject } from "@/components/current-project";
 import { getAgent } from "@/lib/agents/registry";
-import { DEMO_TODAY, latestReport, postsFor, runsFor } from "@/lib/demo-data";
-import { dayKey, formatDateTime, formatNumber, formatTime } from "@/lib/format";
-import { loadProject } from "@/lib/project-page";
+import { useProjectData, useStore } from "@/lib/store";
+import { dayKey, formatDateTime, formatNumber, formatTime, todayKey } from "@/lib/format";
 
-export default async function ProjectDashboard({ params }: PageProps<"/app/[project]">) {
-  const project = await loadProject(params);
-  const posts = postsFor(project.id);
-  const today = posts.filter((p) => p.scheduledAt && dayKey(p.scheduledAt) === DEMO_TODAY);
+export default function ProjectDashboard() {
+  const { project, hydrated } = useCurrentProject();
+  const { posts, report, runs } = useProjectData(project?.id);
+  const { dispatch } = useStore();
+  const [openId, setOpenId] = useState<string | null>(null);
+  if (!project) return <ProjectMissing hydrated={hydrated} />;
+
+  const TODAY = todayKey();
+  const today = posts.filter((p) => p.scheduledAt && dayKey(p.scheduledAt) === TODAY);
   const upcoming = posts
-    .filter((p) => p.scheduledAt && dayKey(p.scheduledAt) > DEMO_TODAY && p.status !== "published")
+    .filter((p) => p.scheduledAt && dayKey(p.scheduledAt) > TODAY && p.status !== "published")
     .sort((a, b) => a.scheduledAt!.localeCompare(b.scheduledAt!));
+  const pending = posts.filter((p) => p.status === "pending_approval");
   const published = posts.filter((p) => p.metrics);
   const reach = published.reduce((s, p) => s + p.metrics!.reach, 0);
   const engagement = published.reduce((s, p) => s + p.metrics!.likes + p.metrics!.comments + p.metrics!.shares, 0);
-  const report = latestReport(project.id);
-  const runs = runsFor(project.id);
   const base = `/app/${project.slug}`;
+  const open = posts.find((p) => p.id === openId);
 
   return (
     <>
       <PageHeader
         title={project.name}
-        description={`Obiective: ${project.goals.join(" · ")}`}
+        description={project.goals.length ? `Obiective: ${project.goals.join(" · ")}` : project.industry}
         actions={
           <Link href={`${base}/studio`} className="btn-primary">
             <WandSparkles size={16} /> Postare nouă
@@ -34,10 +42,11 @@ export default async function ProjectDashboard({ params }: PageProps<"/app/[proj
         }
       />
 
-      <div className="mb-6 grid gap-4 sm:grid-cols-3">
+      <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
         <Stat label="Postări azi" value={String(today.length)} />
-        <Stat label="Oameni atinși (7 zile)" value={formatNumber(reach)} />
-        <Stat label="Interacțiuni (7 zile)" value={formatNumber(engagement)} />
+        <Stat label="De aprobat" value={String(pending.length)} />
+        <Stat label="Oameni atinși" value={formatNumber(reach)} />
+        <Stat label="Interacțiuni" value={formatNumber(engagement)} />
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
@@ -45,12 +54,17 @@ export default async function ProjectDashboard({ params }: PageProps<"/app/[proj
           <SectionTitle title="Urmează" href={`${base}/calendar`} link="Calendar" />
           <ul className="divide-y divide-border">
             {[...today, ...upcoming].map((p) => (
-              <li key={p.id} className="flex items-center gap-4 py-3">
-                <AssetPreview brand={project.brand} kind={p.assetKind} title="" className="w-12 shrink-0 p-1.5" />
+              <li key={p.id} onClick={() => setOpenId(p.id)} className="flex cursor-pointer items-center gap-4 py-3 hover:bg-surface-2/50">
+                {p.imageUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={p.imageUrl} alt="" className="aspect-square w-12 shrink-0 rounded-lg object-cover" />
+                ) : (
+                  <AssetPreview brand={project.brand} kind={p.assetKind} title="" className="w-12 shrink-0 p-1.5" />
+                )}
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium">{p.title}</p>
                   <p className="text-xs text-muted">
-                    {dayKey(p.scheduledAt!) === DEMO_TODAY ? `Azi, ${formatTime(p.scheduledAt!)}` : formatDateTime(p.scheduledAt!)}
+                    {dayKey(p.scheduledAt!) === TODAY ? `Azi, ${formatTime(p.scheduledAt!)}` : formatDateTime(p.scheduledAt!)}
                   </p>
                 </div>
                 <div className="hidden gap-1 sm:flex">
@@ -61,13 +75,22 @@ export default async function ProjectDashboard({ params }: PageProps<"/app/[proj
                 <StatusBadge status={p.status} />
               </li>
             ))}
+            {today.length + upcoming.length === 0 && (
+              <li className="py-6 text-center text-sm text-muted">
+                Nimic programat.{" "}
+                <Link href={`${base}/studio`} className="font-medium text-accent">
+                  Fă prima postare
+                </Link>
+              </li>
+            )}
           </ul>
         </section>
 
         <section className="card p-5">
           <SectionTitle title="Agenții lucrează" />
           <ul className="space-y-3">
-            {runs.map((r) => (
+            {runs.length === 0 && <li className="text-sm text-muted">Încă nicio rulare.</li>}
+            {runs.slice(0, 6).map((r) => (
               <li key={r.id} className="flex gap-3 text-sm">
                 <span
                   className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${
@@ -86,9 +109,38 @@ export default async function ProjectDashboard({ params }: PageProps<"/app/[proj
           </ul>
         </section>
 
+        {pending.length > 0 && (
+          <section className="card p-5 lg:col-span-3">
+            <SectionTitle title="Așteaptă aprobarea ta" />
+            <ul className="divide-y divide-border">
+              {pending.map((p) => (
+                <li key={p.id} className="flex flex-wrap items-center gap-3 py-3">
+                  <button onClick={() => setOpenId(p.id)} className="min-w-0 flex-1 text-left">
+                    <p className="truncate text-sm font-medium">{p.title}</p>
+                    <p className="text-xs text-muted">{p.scheduledAt ? formatDateTime(p.scheduledAt) : "Fără dată"}</p>
+                  </button>
+                  <div className="flex gap-1">
+                    {p.variants.map((v) => (
+                      <PlatformIcon key={v.platform} platform={v.platform} size="sm" />
+                    ))}
+                  </div>
+                  <button
+                    onClick={() =>
+                      dispatch({ type: "updatePost", id: p.id, patch: { status: p.scheduledAt ? "scheduled" : "approved" } })
+                    }
+                    className="btn-primary px-2.5 py-1 text-xs"
+                  >
+                    <Check size={14} /> Aprobă
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
         {report && (
           <section className="card p-5 lg:col-span-3">
-            <SectionTitle title="Idei noi de la Research, azi" href={`${base}/research`} link="Raportul complet" />
+            <SectionTitle title={report.date === TODAY ? "Idei noi de la Research, azi" : "Idei de la Research"} href={`${base}/research`} link="Raportul complet" />
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {report.ideas.slice(0, 3).map((idea) => (
                 <div key={idea.id} className="rounded-lg border border-border p-4">
@@ -110,6 +162,7 @@ export default async function ProjectDashboard({ params }: PageProps<"/app/[proj
           </section>
         )}
       </div>
+      {open && <PostDialog key={open.id} post={open} project={project} onClose={() => setOpenId(null)} />}
     </>
   );
 }

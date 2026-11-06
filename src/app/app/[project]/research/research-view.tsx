@@ -1,11 +1,13 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import clsx from "clsx";
 import { Minus, Radar, RefreshCw, TrendingDown, TrendingUp } from "lucide-react";
 import { PlatformIcon } from "@/components/badges";
 import { PageHeader } from "@/components/page-header";
 import { formatDate } from "@/lib/format";
+import { useLogRun, useStore } from "@/lib/store";
+import { useAgentsLive } from "@/lib/use-agents-live";
 import type { Project, ResearchReport } from "@/lib/types";
 
 const momentum = {
@@ -16,21 +18,13 @@ const momentum = {
 
 const formatLabel = { image: "Imagine", carousel: "Carusel", video: "Video" };
 
-type Report = ResearchReport & { sources?: { title: string; url: string }[] };
-
-export function ResearchView({ project, initial }: { project: Project; initial?: Report }) {
-  const [report, setReport] = useState<Report | undefined>(initial);
-  const [live, setLive] = useState<boolean | null>(null);
+export function ResearchView({ project, report }: { project: Project; report?: ResearchReport }) {
+  const { dispatch } = useStore();
+  const logRun = useLogRun();
+  const status = useAgentsLive();
+  const live = status?.anthropic ?? null;
   const [running, setRunning] = useState(false);
   const [error, setError] = useState("");
-  const [isLive, setIsLive] = useState(false);
-
-  useEffect(() => {
-    fetch("/api/agents/status")
-      .then((r) => r.json())
-      .then((s: { anthropic: boolean }) => setLive(s.anthropic))
-      .catch(() => setLive(false));
-  }, []);
 
   async function run() {
     setRunning(true);
@@ -39,14 +33,22 @@ export function ResearchView({ project, initial }: { project: Project; initial?:
       const res = await fetch("/api/agents/research", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ projectSlug: project.slug }),
+        body: JSON.stringify({ project }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Agentul a eșuat.");
-      setReport(data);
-      setIsLive(true);
+      dispatch({ type: "addReport", report: { ...data, projectId: project.id } });
+      logRun({
+        projectId: project.id,
+        agent: "research",
+        status: "succeeded",
+        summary: `${data.trends?.length ?? 0} trenduri și ${data.ideas?.length ?? 0} idei noi`,
+        costUsd: 0.6,
+      });
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Ceva n-a mers.");
+      const msg = e instanceof Error ? e.message : "Ceva n-a mers.";
+      setError(msg);
+      logRun({ projectId: project.id, agent: "research", status: "failed", summary: msg.slice(0, 120), costUsd: 0 });
     } finally {
       setRunning(false);
     }
@@ -57,11 +59,11 @@ export function ResearchView({ project, initial }: { project: Project; initial?:
       title="Research"
       description={
         report
-          ? `${isLive ? "Raport generat acum" : "Raportul"} din ${formatDate(report.date)}. Agentul urmărește ${project.competitors.length} competitori și trendurile din ${project.industry.toLowerCase()}.`
-          : "Încă nu există un raport."
+          ? `Raportul din ${formatDate(report.date)}. Agentul urmărește ${project.competitors.length} competitori și trendurile din ${project.industry.toLowerCase() || "domeniul tău"}.`
+          : "Încă nu există un raport. Agentul caută pe web trenduri, mișcările competitorilor și idei de postări."
       }
       actions={
-        <button onClick={run} disabled={running || live === false} className="btn-primary" title={live ? "" : "Cheile AI nu sunt setate"}>
+        <button onClick={run} disabled={running || live === false} className="btn-primary" title={live === false ? "Research-ul pornește după ce adaugi cheia Anthropic" : ""}>
           {running ? <RefreshCw size={16} className="animate-spin" /> : <Radar size={16} />}
           {running ? "Caută pe web (1-3 minute)..." : "Rulează research acum"}
         </button>
@@ -80,6 +82,12 @@ export function ResearchView({ project, initial }: { project: Project; initial?:
       <>
         {header}
         {notices}
+        <div className="card flex flex-col items-center p-10 text-center text-sm text-muted">
+          <Radar className="mb-3 text-accent" />
+          {live === false
+            ? "Research-ul pornește după ce adaugi cheia Anthropic în Vercel."
+            : "Apasă „Rulează research acum” ca să primești primul raport."}
+        </div>
       </>
     );
   }
@@ -120,9 +128,10 @@ export function ResearchView({ project, initial }: { project: Project; initial?:
               </li>
             ))}
           </ul>
-          <p className="mt-4 text-xs text-muted">
-            Urmăriți: {project.competitors.map((c) => c.handle).join(", ")}
-          </p>
+          {report.competitorMoves.length === 0 && <p className="text-sm text-muted">Nimic notabil azi.</p>}
+          {project.competitors.length > 0 && (
+            <p className="mt-4 text-xs text-muted">Urmăriți: {project.competitors.map((c) => c.handle).join(", ")}</p>
+          )}
         </section>
 
         <section className="card p-5 lg:col-span-2">
@@ -142,7 +151,9 @@ export function ResearchView({ project, initial }: { project: Project; initial?:
                     ))}
                   </div>
                   <Link
-                    href={`/app/${project.slug}/studio?${new URLSearchParams({ text: idea.title, why: idea.why, format: idea.format, platforms: idea.platforms.join(",") })}`} className="btn-ghost px-2.5 py-1 text-xs">
+                    href={`/app/${project.slug}/studio?idea=${idea.id}`}
+                    className="btn-ghost px-2.5 py-1 text-xs"
+                  >
                     Fă postarea
                   </Link>
                 </div>

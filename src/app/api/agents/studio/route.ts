@@ -3,12 +3,12 @@ import { z } from "zod";
 import { agentErrorMessage, aiStatus } from "@/lib/ai/clients";
 import { runCopywriter } from "@/lib/agents/copywriter";
 import { runCreative } from "@/lib/agents/creative";
-import { getProject } from "@/lib/demo-data";
+import { ProjectSchema } from "@/lib/project-schema";
 
 export const maxDuration = 120;
 
 const Body = z.object({
-  projectSlug: z.string(),
+  project: ProjectSchema,
   idea: z.string().min(3).max(1000),
   format: z.enum(["image", "carousel", "video"]),
   platforms: z.array(z.enum(["instagram", "facebook", "tiktok", "linkedin", "youtube", "x"])).min(1),
@@ -19,10 +19,7 @@ const Body = z.object({
 export async function POST(req: Request) {
   const parsed = Body.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Cerere invalidă." }, { status: 400 });
-  const { projectSlug, idea, format, platforms, withImage } = parsed.data;
-
-  const project = getProject(projectSlug);
-  if (!project) return NextResponse.json({ error: "Proiect inexistent." }, { status: 404 });
+  const { project, idea, format, platforms, withImage } = parsed.data;
 
   const keys = aiStatus();
   if (!keys.anthropic) {
