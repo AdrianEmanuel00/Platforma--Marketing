@@ -51,6 +51,7 @@ export interface BrandKit {
 
 export interface Project {
   id: string;
+  createdAt?: string;
   slug: string;
   name: string;
   industry: string;
@@ -78,6 +79,8 @@ export interface Post {
   scheduledAt?: string;
   variants: PostVariant[];
   source: "research" | "calendar" | "manual";
+  /** Imaginea generată de agentul Creative. */
+  imageUrl?: string;
   metrics?: { reach: number; likes: number; comments: number; shares: number };
 }
 
@@ -96,6 +99,8 @@ export interface ResearchReport {
   trends: { title: string; detail: string; momentum: "rising" | "peak" | "fading" }[];
   competitorMoves: { competitor: string; what: string; result: string }[];
   ideas: ResearchIdea[];
+  /** Paginile citite de agent (doar la rapoartele generate live). */
+  sources?: { title: string; url: string }[];
 }
 
 export type AgentId =

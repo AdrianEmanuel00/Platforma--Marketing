@@ -1,11 +1,25 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import Link from "next/link";
 import clsx from "clsx";
-import { CalendarClock, Check, Film, Images, Image as ImageIcon, RefreshCw, Send, WandSparkles } from "lucide-react";
+import {
+  CalendarClock,
+  Check,
+  FileText,
+  Film,
+  Images,
+  Image as ImageIcon,
+  RefreshCw,
+  Send,
+  UserCheck,
+  WandSparkles,
+} from "lucide-react";
 import { AssetPreview } from "@/components/asset-preview";
 import { PlatformIcon } from "@/components/badges";
-import { platformLabels } from "@/lib/format";
-import type { AssetKind, Platform, Project, ResearchIdea } from "@/lib/types";
+import { formatDateTime, platformLabels, toIsoRo, todayKey } from "@/lib/format";
+import { newId, useLogRun, useStore } from "@/lib/store";
+import { useAgentsLive } from "@/lib/use-agents-live";
+import type { AssetKind, Platform, PostStatus, Project, ResearchIdea } from "@/lib/types";
 
 const formats: { id: AssetKind; label: string; icon: typeof ImageIcon }[] = [
   { id: "image", label: "Imagine", icon: ImageIcon },
@@ -15,8 +29,8 @@ const formats: { id: AssetKind; label: string; icon: typeof ImageIcon }[] = [
 
 type Draft = Partial<Record<Platform, string>>;
 
-// Folosit doar când cheile AI nu sunt setate (modul demo).
-function demoCaption(project: Project, idea: string, platform: Platform) {
+// Text exemplu, folosit doar când serverul nu are încă cheile AI.
+function sampleCaption(project: Project, idea: string, platform: Platform) {
   const tag = `#${project.slug.replace(/-/g, "")}`;
   switch (platform) {
     case "linkedin":
@@ -26,33 +40,45 @@ function demoCaption(project: Project, idea: string, platform: Platform) {
     case "facebook":
       return `${idea}. Te așteptăm la ${project.name}!`;
     default:
-      return `${idea}. ${project.brand.doWords[0] ?? ""} ✨\n\n${tag} #${project.brand.doWords[1]?.replace(/\s/g, "") ?? "brand"}`;
+      return `${idea}. ${project.brand.doWords[0] ?? ""} ✨\n\n${tag}`;
   }
 }
 
-export function StudioEditor({ project, initialIdea }: { project: Project; initialIdea?: ResearchIdea }) {
+function tomorrow() {
+  const d = new Date(`${todayKey()}T12:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + 1);
+  return d.toISOString().slice(0, 10);
+}
+
+export function StudioEditor({
+  project,
+  initialIdea,
+  initialDate,
+}: {
+  project: Project;
+  initialIdea?: ResearchIdea;
+  initialDate?: string;
+}) {
+  const { dispatch } = useStore();
+  const logRun = useLogRun();
+  const status = useAgentsLive();
+  const live = status?.anthropic ?? false;
+
   const [idea, setIdea] = useState(initialIdea?.title ?? "");
   const [format, setFormat] = useState<AssetKind>(initialIdea?.format ?? "image");
-  const [selected, setSelected] = useState<Platform[]>(
-    initialIdea?.platforms.filter((p) => project.connected.includes(p)) ?? project.connected.slice(0, 2),
-  );
+  const fromIdea = initialIdea?.platforms.filter((p) => project.connected.includes(p)) ?? [];
+  const [selected, setSelected] = useState<Platform[]>(fromIdea.length ? fromIdea : project.connected.slice(0, 2));
   const [draft, setDraft] = useState<Draft | null>(null);
   const [generating, setGenerating] = useState(false);
   const [active, setActive] = useState<Platform | null>(null);
-  const [done, setDone] = useState<"" | "posted" | "scheduled">("");
-  const [when, setWhen] = useState("2026-11-07T10:00");
-  const [live, setLive] = useState<boolean | null>(null);
+  const [day, setDay] = useState(initialDate ?? tomorrow());
+  const [time, setTime] = useState("10:00");
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [visualPrompt, setVisualPrompt] = useState("");
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
-
-  useEffect(() => {
-    fetch("/api/agents/status")
-      .then((r) => r.json())
-      .then((s: { anthropic: boolean }) => setLive(s.anthropic))
-      .catch(() => setLive(false));
-  }, []);
+  const [saved, setSaved] = useState<{ status: PostStatus; when?: string } | null>(null);
+  const [sample, setSample] = useState(false);
 
   function toggle(p: Platform) {
     setSelected((s) => (s.includes(p) ? s.filter((x) => x !== p) : [...s, p]));
@@ -60,21 +86,22 @@ export function StudioEditor({ project, initialIdea }: { project: Project; initi
 
   async function generate() {
     setGenerating(true);
-    setDone("");
+    setSaved(null);
     setError("");
     setNotice("");
     try {
       if (!live) {
-        await new Promise((r) => setTimeout(r, 700));
+        await new Promise((r) => setTimeout(r, 500));
         const d: Draft = {};
-        selected.forEach((p) => (d[p] = demoCaption(project, idea.trim(), p)));
+        selected.forEach((p) => (d[p] = sampleCaption(project, idea.trim(), p)));
         setDraft(d);
         setImageUrl(null);
+        setSample(true);
       } else {
         const res = await fetch("/api/agents/studio", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ projectSlug: project.slug, idea: idea.trim(), format, platforms: selected }),
+          body: JSON.stringify({ project, idea: idea.trim(), format, platforms: selected }),
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error ?? "Agentul a eșuat.");
@@ -85,17 +112,59 @@ export function StudioEditor({ project, initialIdea }: { project: Project; initi
         setDraft(d);
         setImageUrl(data.image?.url ?? null);
         setVisualPrompt(data.visualPrompt ?? "");
+        setSample(false);
         if (data.imageError) setNotice(data.imageError);
+        logRun({
+          projectId: project.id,
+          agent: "copywriter",
+          status: "succeeded",
+          summary: `A scris textele pentru „${idea.trim().slice(0, 60)}” pe ${selected.length} platforme`,
+          costUsd: 0.08,
+        });
+        if (data.image?.url) {
+          logRun({ projectId: project.id, agent: "creative", status: "succeeded", summary: "A generat imaginea postării", costUsd: 0.15 });
+        }
       }
       setActive(selected[0] ?? null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Ceva n-a mers.");
+      const msg = e instanceof Error ? e.message : "Ceva n-a mers.";
+      setError(msg);
+      logRun({ projectId: project.id, agent: "copywriter", status: "failed", summary: msg.slice(0, 120), costUsd: 0 });
     } finally {
       setGenerating(false);
     }
   }
 
+  function save(status: PostStatus) {
+    if (!draft) return;
+    const scheduledAt =
+      status === "scheduled" ? toIsoRo(day, time) : status === "published" ? new Date().toISOString() : undefined;
+    dispatch({
+      type: "addPost",
+      post: {
+        id: newId("post"),
+        projectId: project.id,
+        title: idea.trim().slice(0, 120),
+        status,
+        assetKind: format,
+        scheduledAt,
+        source: initialIdea ? "research" : "manual",
+        imageUrl: imageUrl ?? undefined,
+        variants: selected
+          .filter((p) => draft[p] !== undefined)
+          .map((p) => ({ platform: p, caption: draft[p]!, hashtags: [] })),
+      },
+    });
+    setSaved({ status, when: scheduledAt });
+  }
+
   const shown = active && draft?.[active] !== undefined ? active : selected.find((p) => draft?.[p] !== undefined);
+  const savedMessage: Partial<Record<PostStatus, string>> = {
+    draft: "Salvat ca draft. Îl găsești în calendar, la „Neprogramate”.",
+    pending_approval: "Trimis la aprobare. Apare în calendar și pe dashboard.",
+    scheduled: `Programat pentru ${saved?.when ? formatDateTime(saved.when) : ""}.`,
+    published: "Marcat ca publicat. Publicarea reală pornește când conectăm conturile sociale.",
+  };
 
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
@@ -112,7 +181,7 @@ export function StudioEditor({ project, initialIdea }: { project: Project; initi
             placeholder="Ex.: Prezentăm noul abonament de cafea, cu o cană cadou"
             className="input resize-none"
           />
-          {initialIdea && <p className="mt-1.5 text-xs text-muted">Din raportul Research: {initialIdea.why}</p>}
+          {initialIdea?.why && <p className="mt-1.5 text-xs text-muted">Din raportul Research: {initialIdea.why}</p>}
         </div>
 
         <div>
@@ -136,27 +205,36 @@ export function StudioEditor({ project, initialIdea }: { project: Project; initi
 
         <div>
           <p className="mb-1.5 text-sm font-medium">Unde publici</p>
-          <div className="flex flex-wrap gap-2">
-            {project.connected.map((p) => (
-              <button
-                key={p}
-                onClick={() => toggle(p)}
-                className={clsx(
-                  "flex items-center gap-2 rounded-lg border py-1.5 pl-1.5 pr-3 text-sm",
-                  selected.includes(p) ? "border-accent bg-accent-soft" : "border-border opacity-60",
-                )}
-              >
-                <PlatformIcon platform={p} size="sm" />
-                {platformLabels[p]}
-                {selected.includes(p) && <Check size={14} className="text-accent" />}
-              </button>
-            ))}
-          </div>
+          {project.connected.length === 0 ? (
+            <p className="text-sm text-muted">
+              Niciun cont conectat.{" "}
+              <Link href={`/app/${project.slug}/accounts`} className="font-medium text-accent">
+                Conectează conturile
+              </Link>
+            </p>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {project.connected.map((p) => (
+                <button
+                  key={p}
+                  onClick={() => toggle(p)}
+                  className={clsx(
+                    "flex items-center gap-2 rounded-lg border py-1.5 pl-1.5 pr-3 text-sm",
+                    selected.includes(p) ? "border-accent bg-accent-soft" : "border-border opacity-60",
+                  )}
+                >
+                  <PlatformIcon platform={p} size="sm" />
+                  {platformLabels[p]}
+                  {selected.includes(p) && <Check size={14} className="text-accent" />}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         <button
           onClick={generate}
-          disabled={!idea.trim() || selected.length === 0 || generating}
+          disabled={!idea.trim() || selected.length === 0 || generating || status === null}
           className="btn-primary w-full"
         >
           {generating ? <RefreshCw size={16} className="animate-spin" /> : <WandSparkles size={16} />}
@@ -167,8 +245,12 @@ export function StudioEditor({ project, initialIdea }: { project: Project; initi
         )}
         {error && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">{error}</p>}
         <p className="text-xs text-muted">
-          Folosește identitatea „{project.brand.logoText}”: ton {project.brand.voice.split(",")[0].toLowerCase()}, culorile și
-          fonturile brandului.
+          Folosește identitatea „{project.brand.logoText || project.name}”
+          {project.brand.voice && <>: ton {project.brand.voice.split(",")[0].toLowerCase()}</>}, culorile și fonturile
+          brandului.{" "}
+          <Link href={`/app/${project.slug}/brand`} className="text-accent">
+            Editează
+          </Link>
         </p>
       </section>
 
@@ -215,6 +297,9 @@ export function StudioEditor({ project, initialIdea }: { project: Project; initi
                     onChange={(e) => setDraft({ ...draft, [shown]: e.target.value })}
                     className="input min-h-40 flex-1 resize-none"
                   />
+                  {sample && (
+                    <p className="text-xs text-muted">Text exemplu. Agenții AI scriu textul real după ce adaugi cheile.</p>
+                  )}
                   {visualPrompt && (
                     <details className="text-xs text-muted">
                       <summary className="cursor-pointer">Promptul vizual scris de Copywriter</summary>
@@ -225,31 +310,62 @@ export function StudioEditor({ project, initialIdea }: { project: Project; initi
               </div>
             )}
 
-            <div className="flex flex-col gap-3 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-center gap-2">
-                <input
-                  type="datetime-local"
-                  value={when}
-                  onChange={(e) => setWhen(e.target.value)}
-                  className="input w-auto"
-                  aria-label="Data și ora programării"
-                />
-                <button onClick={() => setDone("scheduled")} className="btn-ghost">
-                  <CalendarClock size={16} /> Programează
-                </button>
+            {saved ? (
+              <div className="flex flex-col gap-3 rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800 sm:flex-row sm:items-center dark:bg-emerald-950 dark:text-emerald-300">
+                <p className="flex-1">{savedMessage[saved.status]}</p>
+                <div className="flex gap-2">
+                  <Link href={`/app/${project.slug}/calendar`} className="btn-ghost bg-surface px-2.5 py-1 text-xs">
+                    Vezi în calendar
+                  </Link>
+                  <button
+                    onClick={() => {
+                      setDraft(null);
+                      setSaved(null);
+                      setIdea("");
+                      setImageUrl(null);
+                      setVisualPrompt("");
+                    }}
+                    className="btn-ghost bg-surface px-2.5 py-1 text-xs"
+                  >
+                    Postare nouă
+                  </button>
+                </div>
               </div>
-              <button onClick={() => setDone("posted")} className="btn-primary">
-                <Send size={16} /> Postează acum
-              </button>
-            </div>
-            {notice && <p className="text-xs text-amber-700 dark:text-amber-400">{notice}</p>}
-            {done && (
-              <p className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
-                {done === "posted"
-                  ? `Postarea a fost trimisă spre publicare pe ${selected.map((p) => platformLabels[p]).join(", ")}.`
-                  : `Postarea a fost programată pentru ${when.replace("T", ", ")}.`}
-              </p>
+            ) : (
+              <div className="space-y-3 border-t border-border pt-4">
+                <div className="flex flex-wrap items-center gap-2">
+                  <input
+                    type="date"
+                    value={day}
+                    onChange={(e) => setDay(e.target.value)}
+                    className="input w-auto"
+                    aria-label="Ziua programării"
+                  />
+                  <input
+                    type="time"
+                    value={time}
+                    onChange={(e) => setTime(e.target.value)}
+                    className="input w-auto"
+                    aria-label="Ora programării"
+                  />
+                  <button onClick={() => save("scheduled")} disabled={!day} className="btn-primary">
+                    <CalendarClock size={16} /> Programează
+                  </button>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <button onClick={() => save("draft")} className="btn-ghost">
+                    <FileText size={16} /> Salvează draft
+                  </button>
+                  <button onClick={() => save("pending_approval")} className="btn-ghost">
+                    <UserCheck size={16} /> Trimite la aprobare
+                  </button>
+                  <button onClick={() => save("published")} className="btn-ghost sm:ml-auto">
+                    <Send size={16} /> Postează acum
+                  </button>
+                </div>
+              </div>
             )}
+            {notice && <p className="text-xs text-amber-700 dark:text-amber-400">{notice}</p>}
           </div>
         )}
       </section>

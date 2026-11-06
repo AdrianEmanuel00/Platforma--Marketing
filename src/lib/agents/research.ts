@@ -86,7 +86,7 @@ export async function runResearch(project: Project, today: string): Promise<Rese
     date: today,
     trends: report.trends,
     competitorMoves: report.competitorMoves,
-    ideas: report.ideas.map((i, n) => ({ ...i, id: `live_${n}` })),
+    ideas: report.ideas.map((i, n) => ({ ...i, id: `live_${Date.now().toString(36)}_${n}` })),
     sources: report.sources,
   };
 }

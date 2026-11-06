@@ -1,38 +1,56 @@
+"use client";
+import { Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { PageHeader } from "@/components/page-header";
-import { latestReport } from "@/lib/demo-data";
-import { loadProject } from "@/lib/project-page";
+import { ProjectMissing, useCurrentProject } from "@/components/current-project";
+import { useProjectData } from "@/lib/store";
 import type { AssetKind, Platform, ResearchIdea } from "@/lib/types";
 import { StudioEditor } from "./studio-editor";
 
 const formats: AssetKind[] = ["image", "carousel", "video"];
 const platforms: Platform[] = ["instagram", "facebook", "tiktok", "linkedin", "youtube", "x"];
 
-export default async function StudioPage({ params, searchParams }: PageProps<"/app/[project]/studio">) {
-  const project = await loadProject(params);
-  const sp = await searchParams;
-  const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
-
-  // Ideea vine fie din raportul demo (?idea=id), fie dintr-un raport generat live (?text=...).
-  let idea: ResearchIdea | undefined = latestReport(project.id)?.ideas.find((i) => i.id === one(sp.idea));
-  const text = one(sp.text);
-  if (!idea && text) {
-    const format = one(sp.format) as AssetKind;
-    idea = {
-      id: "from-research",
-      title: text.slice(0, 500),
-      why: one(sp.why)?.slice(0, 500) ?? "",
-      format: formats.includes(format) ? format : "image",
-      platforms: (one(sp.platforms) ?? "").split(",").filter((p): p is Platform => platforms.includes(p as Platform)),
-    };
-  }
-
+export default function StudioPage() {
   return (
     <>
       <PageHeader
         title="Studio de conținut"
         description="Scrii ideea, agenții fac textul și vizualul în identitatea brandului, tu alegi unde publici."
       />
-      <StudioEditor key={idea?.title ?? "new"} project={project} initialIdea={idea} />
+      <Suspense fallback={<div className="h-72 animate-pulse rounded-xl bg-surface-2" />}>
+        <Studio />
+      </Suspense>
     </>
+  );
+}
+
+function Studio() {
+  const { project, hydrated } = useCurrentProject();
+  const { report } = useProjectData(project?.id);
+  const sp = useSearchParams();
+  if (!project) return <ProjectMissing hydrated={hydrated} />;
+
+  // Ideea vine din raportul salvat (?idea=id) sau ca text (?text=...).
+  let idea: ResearchIdea | undefined = report?.ideas.find((i) => i.id === sp.get("idea"));
+  const text = sp.get("text");
+  if (!idea && text) {
+    const format = sp.get("format") as AssetKind;
+    idea = {
+      id: "from-research",
+      title: text.slice(0, 500),
+      why: sp.get("why")?.slice(0, 500) ?? "",
+      format: formats.includes(format) ? format : "image",
+      platforms: (sp.get("platforms") ?? "").split(",").filter((p): p is Platform => platforms.includes(p as Platform)),
+    };
+  }
+  const date = sp.get("date");
+
+  return (
+    <StudioEditor
+      key={`${project.id}-${idea?.title ?? "new"}-${date ?? ""}`}
+      project={project}
+      initialIdea={idea}
+      initialDate={date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : undefined}
+    />
   );
 }

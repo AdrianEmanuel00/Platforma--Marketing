@@ -1,12 +1,15 @@
+"use client";
 import { PlatformIcon } from "@/components/badges";
 import { PageHeader } from "@/components/page-header";
-import { postsFor } from "@/lib/demo-data";
+import { ProjectMissing, useCurrentProject } from "@/components/current-project";
+import { useProjectData } from "@/lib/store";
 import { formatDate, formatNumber } from "@/lib/format";
-import { loadProject } from "@/lib/project-page";
 
-export default async function AnalyticsPage({ params }: PageProps<"/app/[project]/analytics">) {
-  const project = await loadProject(params);
-  const published = postsFor(project.id)
+export default function AnalyticsPage() {
+  const { project, hydrated } = useCurrentProject();
+  const { posts } = useProjectData(project?.id);
+  if (!project) return <ProjectMissing hydrated={hydrated} />;
+  const published = posts
     .filter((p) => p.metrics)
     .sort((a, b) => b.metrics!.reach - a.metrics!.reach);
   const max = Math.max(1, ...published.map((p) => p.metrics!.reach));
@@ -55,7 +58,7 @@ export default async function AnalyticsPage({ params }: PageProps<"/app/[project
             ))}
           </tbody>
         </table>
-        {published.length === 0 && <p className="p-6 text-sm text-muted">Încă nu ai postări publicate.</p>}
+        {published.length === 0 && <p className="p-6 text-sm text-muted">Statisticile apar după ce postările sunt publicate pe conturile conectate.</p>}
       </div>
     </>
   );

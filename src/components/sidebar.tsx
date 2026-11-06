@@ -14,7 +14,7 @@ import {
   Settings,
   WandSparkles,
 } from "lucide-react";
-import type { Project, Workspace } from "@/lib/types";
+import { useStore } from "@/lib/store";
 
 const projectNav = [
   { href: "", label: "Dashboard", icon: LayoutDashboard },
@@ -27,7 +27,9 @@ const projectNav = [
   { href: "/accounts", label: "Conturi conectate", icon: Plug },
 ];
 
-export function Sidebar({ workspace, projects }: { workspace: Workspace; projects: Project[] }) {
+export function Sidebar() {
+  const { state } = useStore();
+  const { workspace, projects } = state;
   const pathname = usePathname();
   const router = useRouter();
   const slug = pathname.split("/")[2];
@@ -69,7 +71,7 @@ export function Sidebar({ workspace, projects }: { workspace: Workspace; project
         <select
           id="project"
           value={current?.slug ?? ""}
-          onChange={(e) => e.target.value && router.push(`/app/${e.target.value}`)}
+          onChange={(e) => e.target.value && router.push(e.target.value === "__new" ? "/app/new" : `/app/${e.target.value}`)}
           className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-2 text-sm text-white outline-none"
         >
           <option value="" disabled>
@@ -80,6 +82,7 @@ export function Sidebar({ workspace, projects }: { workspace: Workspace; project
               {p.name}
             </option>
           ))}
+          <option value="__new" className="text-black">+ Client nou</option>
         </select>
         {current && (
           <nav className="flex flex-col gap-1">
