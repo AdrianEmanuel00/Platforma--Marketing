@@ -1,0 +1,69 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f7f7f9;
+  --surface: #ffffff;
+  --surface-2: #f1f1f5;
+  --border: #e4e4ea;
+  --foreground: #16161d;
+  --muted: #6b6b7b;
+  --accent: #6d4aff;
+  --accent-soft: #efeaff;
+  --sidebar: #13121a;
+  --sidebar-fg: #c9c7d6;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0e0e13;
+    --surface: #17171f;
+    --surface-2: #1f1f29;
+    --border: #2a2a36;
+    --foreground: #ededf3;
+    --muted: #9a9aab;
+    --accent: #8b6dff;
+    --accent-soft: #241d45;
+    --sidebar: #0a0a0e;
+    --sidebar-fg: #b8b6c8;
+  }
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-border: var(--border);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-fg: var(--sidebar-fg);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+}
+
+@utility card {
+  @apply rounded-xl border border-border bg-surface;
+}
+
+@utility btn {
+  @apply inline-flex items-center justify-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition-colors disabled:opacity-50;
+}
+
+@utility btn-primary {
+  @apply btn bg-accent text-white hover:opacity-90;
+}
+
+@utility btn-ghost {
+  @apply btn border border-border bg-surface text-foreground hover:bg-surface-2;
+}
+
+@utility input {
+  @apply w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-accent;
+}
