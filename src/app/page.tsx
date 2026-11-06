@@ -12,7 +12,7 @@ const features = [
 
 export default function Home() {
   // Fără conturi încă, pagina principală deschide direct aplicația.
-  if (!authEnabled) redirect("/app");
+  if (!authEnabled) redirect("/login");
 
   return (
     <main className="mx-auto flex min-h-screen max-w-5xl flex-col px-4 py-10 sm:px-6">

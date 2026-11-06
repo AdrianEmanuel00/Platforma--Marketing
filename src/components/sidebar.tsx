@@ -8,13 +8,14 @@ import {
   Images,
   LayoutDashboard,
   LayoutGrid,
+  LogOut,
   Palette,
   Plug,
   Radar,
   Settings,
   WandSparkles,
 } from "lucide-react";
-import { useStore } from "@/lib/store";
+import { chooseAccount, useStore } from "@/lib/store";
 
 const projectNav = [
   { href: "", label: "Dashboard", icon: LayoutDashboard },
@@ -28,14 +29,23 @@ const projectNav = [
 ];
 
 export function Sidebar() {
-  const { state } = useStore();
+  const { state, account } = useStore();
   const { workspace, projects } = state;
   const pathname = usePathname();
   const router = useRouter();
   const slug = pathname.split("/")[2];
-  const current = projects.find((p) => p.slug === slug);
+  const isBusiness = account === "business";
+  // O afacere are un singur brand, deci meniul lui e mereu vizibil.
+  const current =
+    projects.find((p) => p.slug === slug) ??
+    (isBusiness ? projects[0] : undefined);
 
-  const link = (href: string, label: string, Icon: typeof LayoutGrid, exact = false) => {
+  const link = (
+    href: string,
+    label: string,
+    Icon: typeof LayoutGrid,
+    exact = false,
+  ) => {
     const active = exact ? pathname === href : pathname.startsWith(href);
     return (
       <Link
@@ -43,7 +53,9 @@ export function Sidebar() {
         href={href}
         className={clsx(
           "flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition-colors",
-          active ? "bg-white/10 text-white" : "text-sidebar-fg hover:bg-white/5 hover:text-white",
+          active
+            ? "bg-white/10 text-white"
+            : "text-sidebar-fg hover:bg-white/5 hover:text-white",
         )}
       >
         <Icon size={16} />
@@ -55,45 +67,97 @@ export function Sidebar() {
   return (
     <aside className="flex w-full shrink-0 flex-col gap-6 bg-sidebar p-4 md:sticky md:top-0 md:h-screen md:w-64">
       <div className="flex items-center gap-2 px-1">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent font-bold text-white">P</div>
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent font-bold text-white">
+          P
+        </div>
         <div className="leading-tight">
           <p className="text-sm font-semibold text-white">{workspace.name}</p>
-          <p className="text-xs text-sidebar-fg">{workspace.kind === "agency" ? "Agenție" : "Afacere"}</p>
+          <p className="text-xs text-sidebar-fg">
+            {isBusiness ? "Cont de afacere" : "Cont de agenție"}
+          </p>
         </div>
       </div>
 
-      <nav className="flex flex-col gap-1">{link("/app", "Toți clienții", LayoutGrid, true)}</nav>
-
-      <div className="flex flex-col gap-2">
-        <label htmlFor="project" className="px-1 text-[11px] font-semibold uppercase tracking-wider text-sidebar-fg/70">
-          Proiect
-        </label>
-        <select
-          id="project"
-          value={current?.slug ?? ""}
-          onChange={(e) => e.target.value && router.push(e.target.value === "__new" ? "/app/new" : `/app/${e.target.value}`)}
-          className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-2 text-sm text-white outline-none"
-        >
-          <option value="" disabled>
-            Alege un client
-          </option>
-          {projects.map((p) => (
-            <option key={p.id} value={p.slug} className="text-black">
-              {p.name}
-            </option>
-          ))}
-          <option value="__new" className="text-black">+ Client nou</option>
-        </select>
-        {current && (
+      {isBusiness ? (
+        current && (
           <nav className="flex flex-col gap-1">
             {projectNav.map((n) =>
-              link(`/app/${current.slug}${n.href}`, n.label, n.icon, n.href === ""),
+              link(
+                `/app/${current.slug}${n.href}`,
+                n.label,
+                n.icon,
+                n.href === "",
+              ),
             )}
           </nav>
-        )}
-      </div>
+        )
+      ) : (
+        <>
+          <nav className="flex flex-col gap-1">
+            {link("/app", "Toți clienții", LayoutGrid, true)}
+          </nav>
 
-      <nav className="mt-auto flex flex-col gap-1">{link("/app/settings", "Setări", Settings)}</nav>
+          <div className="flex flex-col gap-2">
+            <label
+              htmlFor="project"
+              className="px-1 text-[11px] font-semibold uppercase tracking-wider text-sidebar-fg/70"
+            >
+              Proiect
+            </label>
+            <select
+              id="project"
+              value={current?.slug ?? ""}
+              onChange={(e) =>
+                e.target.value &&
+                router.push(
+                  e.target.value === "__new"
+                    ? "/app/new"
+                    : `/app/${e.target.value}`,
+                )
+              }
+              className="rounded-lg border border-white/10 bg-white/5 px-2.5 py-2 text-sm text-white outline-none"
+            >
+              <option value="" disabled>
+                Alege un client
+              </option>
+              {projects.map((p) => (
+                <option key={p.id} value={p.slug} className="text-black">
+                  {p.name}
+                </option>
+              ))}
+              <option value="__new" className="text-black">
+                + Client nou
+              </option>
+            </select>
+            {current && (
+              <nav className="flex flex-col gap-1">
+                {projectNav.map((n) =>
+                  link(
+                    `/app/${current.slug}${n.href}`,
+                    n.label,
+                    n.icon,
+                    n.href === "",
+                  ),
+                )}
+              </nav>
+            )}
+          </div>
+        </>
+      )}
+
+      <nav className="mt-auto flex flex-col gap-1">
+        {link("/app/settings", "Setări", Settings)}
+        <button
+          onClick={() => {
+            chooseAccount(null);
+            router.push("/login");
+          }}
+          className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm text-sidebar-fg transition-colors hover:bg-white/5 hover:text-white"
+        >
+          <LogOut size={16} />
+          Schimbă contul
+        </button>
+      </nav>
     </aside>
   );
 }
