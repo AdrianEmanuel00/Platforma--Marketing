@@ -13,6 +13,8 @@ const Body = z.object({
   format: z.enum(["image", "carousel", "video"]),
   platforms: z.array(z.enum(["instagram", "facebook", "tiktok", "linkedin", "youtube", "x"])).min(1),
   withImage: z.boolean().default(true),
+  segmentId: z.string().max(80).optional(),
+  direction: z.string().max(1000).optional(),
   series: z
     .object({
       name: z.string().max(120),
@@ -30,7 +32,8 @@ const Body = z.object({
 export async function POST(req: Request) {
   const parsed = Body.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Cerere invalidă." }, { status: 400 });
-  const { project, idea, format, platforms, withImage, series } = parsed.data;
+  const { project, idea, format, platforms, withImage, series, segmentId, direction } = parsed.data;
+  const segment = project.brand.segments?.find((s) => s.id === segmentId);
 
   const keys = aiStatus();
   if (!keys.anthropic) {
@@ -38,7 +41,7 @@ export async function POST(req: Request) {
   }
 
   try {
-    const copy = await runCopywriter({ project, idea, format, platforms, series });
+    const copy = await runCopywriter({ project, idea, format, platforms, series, segment, direction });
     let image: { url: string; model: string } | null = null;
     let imageError: string | null = null;
     if (withImage) {

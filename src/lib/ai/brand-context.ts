@@ -1,4 +1,8 @@
-import type { Project } from "../types";
+import type { AudienceSegment, Project } from "../types";
+
+export function segmentLine(s: AudienceSegment) {
+  return `„${s.name}”: ${s.who}. Stil vizual pentru ei: ${s.visualStyle || "ca stilul brandului"}. Ton: ${s.tone || "ca tonul brandului"}.`;
+}
 
 /** Identitatea brandului, ca text pe care îl primesc toți agenții. */
 export function brandContext(project: Project) {
@@ -14,5 +18,8 @@ export function brandContext(project: Project) {
     `Fonturi: titluri ${b.fonts.heading}, text ${b.fonts.body}`,
     `Logo (text): ${b.logoText}`,
     `Stil vizual: ${b.visualStyle}`,
-  ].join("\n");
+    b.segments?.length ? `Segmente de public (fiecare reacționează diferit):\n${b.segments.map((s) => `- ${segmentLine(s)}`).join("\n")}` : "",
+  ]
+    .filter(Boolean)
+    .join("\n");
 }

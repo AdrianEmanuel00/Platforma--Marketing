@@ -46,6 +46,7 @@ export default function BrandPage() {
         doWords: kit.doWords,
         dontWords: kit.dontWords,
         visualStyle: kit.visualStyle,
+        segments: brand.segments,
       });
       logRun({ projectId: project.id, agent: "brand", status: "succeeded", summary: `A reanalizat ${project.website}`, costUsd: 0.12 });
     } catch (e) {
