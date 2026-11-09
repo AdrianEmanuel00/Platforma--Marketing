@@ -1,11 +1,23 @@
 "use client";
-// Starea aplicației, salvată în browser (localStorage) până conectăm Supabase.
-// Toate ecranele citesc și scriu prin acest store, deci mutarea pe baza de date
+// Starea aplicației. Local se salvează în baza SQLite din .data/ (prin /api/state),
+// iar în browser (localStorage) ca rezervă, de exemplu pe Vercel, unde baza locală e oprită.
+// Toate ecranele citesc și scriu prin acest store, deci mutarea pe Supabase
 // înseamnă doar înlocuirea funcțiilor de aici cu apeluri la server.
-import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import * as seed from "./demo-data";
 import * as biz from "./demo-business";
-import type { AgentRun, ContentSeries, Member, Platform, Post, Project, ResearchReport, Workspace } from "./types";
+import type {
+  AgentRun,
+  CompetitorDossier,
+  ContentSeries,
+  KeywordReport,
+  Member,
+  Platform,
+  Post,
+  Project,
+  ResearchReport,
+  Workspace,
+} from "./types";
 
 export interface AppState {
   version: 1;
@@ -16,6 +28,8 @@ export interface AppState {
   reports: ResearchReport[];
   runs: AgentRun[];
   series: ContentSeries[];
+  keywordReports: KeywordReport[];
+  dossiers: CompetitorDossier[];
 }
 
 /** Cele două conturi demo: o agenție cu mai mulți clienți și o afacere care își face singură social media. */
@@ -34,6 +48,8 @@ function seedState(account: AccountId): AppState {
       reports: biz.businessReports,
       runs: biz.businessRuns,
       series: biz.businessSeries,
+      keywordReports: [],
+      dossiers: [],
     };
   }
   return {
@@ -45,7 +61,25 @@ function seedState(account: AccountId): AppState {
     reports: seed.researchReports,
     runs: seed.agentRuns,
     series: seed.series,
+    keywordReports: [],
+    dossiers: [],
   };
+}
+
+/** Aduce datele salvate de versiuni mai vechi la forma de acum. Întoarce null dacă nu sunt valide. */
+function upgrade(raw: unknown, acc: AccountId): AppState | null {
+  const saved = raw as AppState;
+  if (saved?.version !== 1 || !Array.isArray(saved.projects)) return null;
+  // Datele salvate înainte de serii primesc seriile de exemplu ale contului.
+  if (!Array.isArray(saved.series)) {
+    const fresh = seedState(acc);
+    const seriesOf = new Map(fresh.posts.map((p) => [p.id, p.seriesId]));
+    saved.series = fresh.series;
+    saved.posts = saved.posts.map((p) => (p.seriesId || !seriesOf.get(p.id) ? p : { ...p, seriesId: seriesOf.get(p.id) }));
+  }
+  if (!Array.isArray(saved.keywordReports)) saved.keywordReports = [];
+  if (!Array.isArray(saved.dossiers)) saved.dossiers = [];
+  return saved;
 }
 
 export function readAccount(): AccountId | null {
@@ -81,7 +115,9 @@ type Action =
   | { type: "addRun"; run: AgentRun }
   | { type: "addSeries"; series: ContentSeries }
   | { type: "updateSeries"; id: string; patch: Partial<ContentSeries> }
-  | { type: "deleteSeries"; id: string };
+  | { type: "deleteSeries"; id: string }
+  | { type: "addKeywordReport"; report: KeywordReport }
+  | { type: "addDossier"; dossier: CompetitorDossier };
 
 function reducer(state: AppState, action: Action): AppState {
   switch (action.type) {
@@ -104,6 +140,8 @@ function reducer(state: AppState, action: Action): AppState {
         projects: state.projects.filter((p) => p.id !== action.id),
         posts: state.posts.filter((p) => p.projectId !== action.id),
         reports: state.reports.filter((r) => r.projectId !== action.id),
+        keywordReports: state.keywordReports.filter((r) => r.projectId !== action.id),
+        dossiers: state.dossiers.filter((r) => r.projectId !== action.id),
         runs: state.runs.filter((r) => r.projectId !== action.id),
         series: state.series.filter((r) => r.projectId !== action.id),
       };
@@ -141,6 +179,10 @@ function reducer(state: AppState, action: Action): AppState {
         series: state.series.filter((x) => x.id !== action.id),
         posts: state.posts.map((p) => (p.seriesId === action.id ? { ...p, seriesId: undefined } : p)),
       };
+    case "addKeywordReport":
+      return { ...state, keywordReports: [action.report, ...state.keywordReports].slice(0, 100) };
+    case "addDossier":
+      return { ...state, dossiers: [action.dossier, ...state.dossiers].slice(0, 300) };
   }
 }
 
@@ -148,6 +190,8 @@ interface StoreValue {
   state: AppState;
   hydrated: boolean;
   account: AccountId;
+  /** Unde se salvează datele: în baza locală sau doar în browser. */
+  storage: "db" | "browser";
   dispatch: (a: Action) => void;
 }
 
@@ -158,7 +202,13 @@ export function StoreProvider({ children, onNoAccount }: { children: React.React
   const [hydrated, setHydrated] = useState(false);
   const [account, setAccount] = useState<AccountId>("agency");
 
-  // Citim localStorage doar după montare (serverul nu îl are), deci efectul e locul corect.
+  // Unde se salvează: "db" = baza locală SQLite, "browser" = doar localStorage.
+  const [storage, setStorage] = useState<"db" | "browser">("browser");
+  const dbReady = useRef(false);
+  // Forțează o salvare în bază chiar dacă starea nu s-a schimbat (prima sincronizare).
+  const [dbDirty, setDbDirty] = useState(0);
+
+  // Citim localStorage și baza doar după montare (serverul nu are browserul), deci efectul e locul corect.
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     const acc = readAccount();
@@ -166,27 +216,34 @@ export function StoreProvider({ children, onNoAccount }: { children: React.React
       onNoAccount();
       return;
     }
+    let cancelled = false;
     setAccount(acc);
     dispatch({ type: "load", state: seedState(acc) });
+    let local: AppState | null = null;
     try {
       const raw = localStorage.getItem(storageKey(acc));
-      if (raw) {
-        const saved = JSON.parse(raw) as AppState;
-        if (saved?.version === 1 && Array.isArray(saved.projects)) {
-          // Datele salvate înainte de serii primesc seriile de exemplu ale contului.
-          if (!Array.isArray(saved.series)) {
-            const fresh = seedState(acc);
-            const seriesOf = new Map(fresh.posts.map((p) => [p.id, p.seriesId]));
-            saved.series = fresh.series;
-            saved.posts = saved.posts.map((p) => (p.seriesId || !seriesOf.get(p.id) ? p : { ...p, seriesId: seriesOf.get(p.id) }));
-          }
-          dispatch({ type: "load", state: saved });
-        }
-      }
+      if (raw) local = upgrade(JSON.parse(raw), acc);
     } catch {
       // Stocare indisponibilă (fereastră privată etc.): rămânem pe datele inițiale.
     }
-    setHydrated(true);
+    if (local) dispatch({ type: "load", state: local });
+
+    // Baza locală are ultimul cuvânt; dacă e goală, îi dăm ce era în browser.
+    fetch(`/api/state?account=${acc}`, { signal: AbortSignal.timeout(4000) })
+      .then((r) => r.json())
+      .then((data: { enabled?: boolean; state?: unknown }) => {
+        if (cancelled || !data.enabled) return;
+        const fromDb = data.state ? upgrade(data.state, acc) : null;
+        if (fromDb) dispatch({ type: "load", state: fromDb });
+        dbReady.current = true;
+        setStorage("db");
+        if (!fromDb) setDbDirty((n) => n + 1);
+      })
+      .catch(() => {})
+      .finally(() => !cancelled && setHydrated(true));
+    return () => {
+      cancelled = true;
+    };
   }, [onNoAccount]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
@@ -197,9 +254,18 @@ export function StoreProvider({ children, onNoAccount }: { children: React.React
     } catch {
       // ignorăm: aplicația merge și fără salvare
     }
-  }, [state, hydrated, account]);
+    if (!dbReady.current) return;
+    const t = setTimeout(() => {
+      fetch("/api/state", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ account, state }),
+      }).catch(() => {});
+    }, 400);
+    return () => clearTimeout(t);
+  }, [state, hydrated, account, dbDirty]);
 
-  const value = useMemo(() => ({ state, hydrated, account, dispatch }), [state, hydrated, account]);
+  const value = useMemo(() => ({ state, hydrated, account, storage, dispatch }), [state, hydrated, account, storage]);
   if (!hydrated) return <div className="min-h-screen bg-background" />;
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }
@@ -224,8 +290,10 @@ export function useProjectData(projectId: string | undefined) {
       report: state.reports.find((r) => r.projectId === projectId),
       runs: state.runs.filter((r) => r.projectId === projectId),
       series: state.series.filter((r) => r.projectId === projectId),
+      keywordReport: state.keywordReports.find((r) => r.projectId === projectId),
+      dossiers: state.dossiers.filter((r) => r.projectId === projectId),
     }),
-    [state.posts, state.reports, state.runs, state.series, projectId],
+    [state.posts, state.reports, state.runs, state.series, state.keywordReports, state.dossiers, projectId],
   );
 }
 

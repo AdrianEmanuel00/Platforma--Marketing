@@ -13,8 +13,16 @@ export const ProjectSchema = z.object({
   autopilot: z.boolean(),
   connected: z.array(PlatformEnum),
   competitors: z
-    .array(z.object({ name: z.string().max(120), handle: z.string().max(120), platform: PlatformEnum }))
+    .array(
+      z.object({
+        name: z.string().max(120),
+        handle: z.string().max(120),
+        platform: PlatformEnum,
+        website: z.string().max(300).optional(),
+      }),
+    )
     .max(20),
+  keywords: z.array(z.string().max(80)).max(30).optional(),
   brand: z.object({
     colors: z.array(z.object({ name: z.string().max(60), hex: z.string().max(9) })).max(8),
     fonts: z.object({ heading: z.string().max(60), body: z.string().max(60) }),
@@ -24,5 +32,18 @@ export const ProjectSchema = z.object({
     doWords: z.array(z.string().max(80)).max(20),
     dontWords: z.array(z.string().max(80)).max(20),
     visualStyle: z.string().max(1000),
+    segments: z
+      .array(
+        z.object({
+          id: z.string().max(80),
+          name: z.string().max(120),
+          who: z.string().max(1000),
+          visualStyle: z.string().max(1000),
+          tone: z.string().max(1000),
+          platforms: z.array(PlatformEnum),
+        }),
+      )
+      .max(10)
+      .optional(),
   }),
 });

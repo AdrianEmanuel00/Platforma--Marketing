@@ -6,6 +6,7 @@ import {
   CalendarDays,
   ChartColumn,
   Images,
+  KeyRound,
   LayoutDashboard,
   LayoutGrid,
   LogOut,
@@ -14,6 +15,7 @@ import {
   Radar,
   Repeat,
   Settings,
+  Swords,
   WandSparkles,
 } from "lucide-react";
 import { LogoMark } from "@/components/logo";
@@ -25,6 +27,8 @@ const projectNav = [
   { href: "/series", label: "Serii de conținut", icon: Repeat },
   { href: "/calendar", label: "Calendar", icon: CalendarDays },
   { href: "/research", label: "Research", icon: Radar },
+  { href: "/keywords", label: "Cuvinte cheie", icon: KeyRound },
+  { href: "/competitors", label: "Competitori", icon: Swords },
   { href: "/brand", label: "Identitate de brand", icon: Palette },
   { href: "/media", label: "Bibliotecă media", icon: Images },
   { href: "/analytics", label: "Statistici", icon: ChartColumn },

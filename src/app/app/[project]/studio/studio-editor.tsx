@@ -13,6 +13,7 @@ import {
   RefreshCw,
   Send,
   UserCheck,
+  Users,
   WandSparkles,
 } from "lucide-react";
 import { AssetPreview } from "@/components/asset-preview";
@@ -111,6 +112,10 @@ export function StudioEditor({
     when?: string;
   } | null>(null);
   const [sample, setSample] = useState(false);
+  const segments = project.brand.segments ?? [];
+  const [segmentId, setSegmentId] = useState("");
+  const segment = segments.find((x) => x.id === segmentId);
+  const [direction, setDirection] = useState("");
 
   function toggle(p: Platform) {
     setSelected((s) => (s.includes(p) ? s.filter((x) => x !== p) : [...s, p]));
@@ -140,6 +145,8 @@ export function StudioEditor({
             idea: idea.trim(),
             format,
             platforms: selected,
+            segmentId: segment?.id,
+            direction: direction.trim() || undefined,
             series: currentSeries
               ? seriesContext(currentSeries, posts)
               : undefined,
@@ -302,6 +309,47 @@ export function StudioEditor({
               Din raportul Research: {initialIdea.why}
             </p>
           )}
+        </div>
+
+        {segments.length > 0 && (
+          <div>
+            <label htmlFor="segment" className="mb-1.5 flex items-center gap-1.5 text-sm font-medium">
+              <Users size={14} /> Pentru cine
+            </label>
+            <select
+              id="segment"
+              className="input"
+              value={segmentId}
+              onChange={(e) => {
+                setSegmentId(e.target.value);
+                const s = segments.find((x) => x.id === e.target.value);
+                const pl = s?.platforms.filter((p) => project.connected.includes(p)) ?? [];
+                if (pl.length) setSelected(pl);
+              }}
+            >
+              <option value="">Tot publicul</option>
+              {segments.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+            {segment?.visualStyle && <p className="mt-1.5 text-xs text-muted">Stil vizual: {segment.visualStyle}</p>}
+          </div>
+        )}
+
+        <div>
+          <label htmlFor="direction" className="mb-1.5 block text-sm font-medium">
+            Indicații pentru imagine sau video <span className="font-normal text-muted">(opțional)</span>
+          </label>
+          <textarea
+            id="direction"
+            rows={2}
+            value={direction}
+            onChange={(e) => setDirection(e.target.value)}
+            placeholder="Ex.: fotografie brută, din teren, fără text pe imagine, lumină de dimineață"
+            className="input resize-none"
+          />
         </div>
 
         <div>

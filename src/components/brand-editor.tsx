@@ -1,7 +1,29 @@
 "use client";
 import { useState } from "react";
-import { Plus, X } from "lucide-react";
-import type { BrandKit } from "@/lib/types";
+import { Plus, Trash2, Users, X } from "lucide-react";
+import { PlatformIcon } from "@/components/badges";
+import { newId } from "@/lib/store";
+import type { AudienceSegment, BrandKit, Platform } from "@/lib/types";
+
+const PLATFORMS: Platform[] = ["instagram", "facebook", "tiktok", "linkedin", "youtube", "x"];
+
+/** Exemple ca punct de plecare: același brand, două publicuri care reacționează diferit. */
+const SEGMENT_EXAMPLES: Omit<AudienceSegment, "id">[] = [
+  {
+    name: "Tineri până în 33 de ani",
+    who: "18-33 de ani, pe telefon, urmăresc Reels și TikTok, decid repede",
+    visualStyle: "Editat, colorat, modern, cu text mare pe imagine și tranziții rapide",
+    tone: "Direct, energic, cu umor",
+    platforms: ["instagram", "tiktok"],
+  },
+  {
+    name: "Public matur 45+",
+    who: "45+ de ani, pe Facebook, au încredere în oameni reali și în experiență",
+    visualStyle: "Brut, natural, fotografii reale din teren, fără efecte, oameni adevărați",
+    tone: "Calm, practic, cu exemple concrete",
+    platforms: ["facebook"],
+  },
+];
 
 export const FONT_OPTIONS = [
   "Inter",
@@ -159,7 +181,102 @@ export function BrandEditor({ value, onChange }: { value: BrandKit; onChange: (b
           <TagInput label="Cuvinte interzise" tone="bad" values={value.dontWords} onChange={(v) => set("dontWords", v)} />
         </div>
       </section>
+
+      <SegmentsEditor segments={value.segments ?? []} onChange={(v) => set("segments", v)} />
     </div>
+  );
+}
+
+function SegmentsEditor({ segments, onChange }: { segments: AudienceSegment[]; onChange: (v: AudienceSegment[]) => void }) {
+  const update = (i: number, patch: Partial<AudienceSegment>) => onChange(segments.map((x, j) => (j === i ? { ...x, ...patch } : x)));
+  const add = (base?: Omit<AudienceSegment, "id">) =>
+    onChange([
+      ...segments,
+      { id: newId("seg"), name: "", who: "", visualStyle: "", tone: "", platforms: [], ...base },
+    ]);
+  const unusedExamples = SEGMENT_EXAMPLES.filter((e) => !segments.some((s) => s.name === e.name));
+
+  return (
+    <section className="card space-y-4 p-5 lg:col-span-2">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="flex items-center gap-2 font-semibold">
+            <Users size={16} /> Segmente de public
+          </h2>
+          <p className="mt-1 text-sm text-muted">
+            Publicuri diferite reacționează la imagini diferite. În Studio alegi pentru cine e postarea, iar agenții folosesc stilul
+            segmentului.
+          </p>
+        </div>
+        {segments.length < 8 && (
+          <button onClick={() => add()} className="btn-ghost">
+            <Plus size={16} /> Segment
+          </button>
+        )}
+      </div>
+
+      {segments.length === 0 && unusedExamples.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2 text-sm text-muted">
+          Pornește de la un exemplu:
+          {unusedExamples.map((e) => (
+            <button key={e.name} onClick={() => add(e)} className="rounded-full border border-border px-3 py-1 text-xs hover:text-accent">
+              + {e.name}
+            </button>
+          ))}
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+        {segments.map((seg, i) => (
+          <div key={seg.id} className="space-y-3 rounded-lg border border-border p-3">
+            <div className="flex items-center gap-2">
+              <input
+                aria-label="Numele segmentului"
+                className="input font-medium"
+                placeholder="Ex.: Tineri până în 33 de ani"
+                value={seg.name}
+                onChange={(e) => update(i, { name: e.target.value })}
+              />
+              <button aria-label="Șterge segmentul" onClick={() => onChange(segments.filter((_, j) => j !== i))} className="text-muted hover:text-red-500">
+                <Trash2 size={16} />
+              </button>
+            </div>
+            <SegmentField label="Cine sunt" placeholder="Vârstă, interese, unde stau online" value={seg.who} onChange={(v) => update(i, { who: v })} />
+            <SegmentField
+              label="Cum arată imaginile și video-urile pentru ei"
+              placeholder="Ex.: brut, natural, oameni reali, fără efecte"
+              value={seg.visualStyle}
+              onChange={(v) => update(i, { visualStyle: v })}
+            />
+            <SegmentField label="Cum le vorbim" placeholder="Ex.: calm, practic" value={seg.tone} onChange={(v) => update(i, { tone: v })} />
+            <div className="flex flex-wrap gap-1.5">
+              {PLATFORMS.map((p) => {
+                const on = seg.platforms.includes(p);
+                return (
+                  <button
+                    key={p}
+                    aria-pressed={on}
+                    onClick={() => update(i, { platforms: on ? seg.platforms.filter((x) => x !== p) : [...seg.platforms, p] })}
+                    className={`rounded-lg border p-1 ${on ? "border-accent" : "border-border opacity-40"}`}
+                  >
+                    <PlatformIcon platform={p} size="sm" />
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function SegmentField({ label, placeholder, value, onChange }: { label: string; placeholder: string; value: string; onChange: (v: string) => void }) {
+  return (
+    <label className="block">
+      <span className="mb-1 block text-xs font-medium text-muted">{label}</span>
+      <textarea rows={2} className="input resize-none text-sm" placeholder={placeholder} value={value} onChange={(e) => onChange(e.target.value)} />
+    </label>
   );
 }
 

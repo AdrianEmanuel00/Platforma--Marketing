@@ -26,12 +26,12 @@ export default function StudioPage() {
 
 function Studio() {
   const { project, hydrated } = useCurrentProject();
-  const { report, series } = useProjectData(project?.id);
+  const { report, keywordReport, series } = useProjectData(project?.id);
   const sp = useSearchParams();
   if (!project) return <ProjectMissing hydrated={hydrated} />;
 
   // Ideea vine din raportul salvat (?idea=id) sau ca text (?text=...).
-  let idea: ResearchIdea | undefined = report?.ideas.find((i) => i.id === sp.get("idea"));
+  let idea: ResearchIdea | undefined = [...(report?.ideas ?? []), ...(keywordReport?.ideas ?? [])].find((i) => i.id === sp.get("idea"));
   const text = sp.get("text");
   if (!idea && text) {
     const format = sp.get("format") as AssetKind;

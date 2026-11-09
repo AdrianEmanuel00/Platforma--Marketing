@@ -62,6 +62,22 @@ export const agents: AgentDefinition[] = [
     schedule: "0 5 * * *",
   },
   {
+    id: "keywords",
+    name: "Cuvinte cheie",
+    tagline: "Ce caută oamenii acum față de anul trecut și ce urmează să crească",
+    stage: "mvp",
+    primary: { provider: "anthropic", model: "claude-opus-5-5" },
+    schedule: "0 5 * * 1",
+  },
+  {
+    id: "competitors",
+    name: "Competitori",
+    tagline: "Site, rețele și reclamele plătite ale fiecărui competitor",
+    stage: "mvp",
+    primary: { provider: "anthropic", model: "claude-opus-5-5" },
+    schedule: "0 6 * * 1",
+  },
+  {
     id: "strategist",
     name: "Strateg",
     tagline: "Transformă obiectivele într-un calendar lunar",

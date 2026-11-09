@@ -2,9 +2,9 @@ import "server-only";
 import { z } from "zod";
 import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
 import { claude, fallbackParams, MODEL } from "../ai/clients";
-import { brandContext } from "../ai/brand-context";
+import { brandContext, segmentLine } from "../ai/brand-context";
 import { platformLabels } from "../format";
-import type { AssetKind, Platform, Project } from "../types";
+import type { AssetKind, AudienceSegment, Platform, Project } from "../types";
 
 const platformGuide: Record<Platform, string> = {
   instagram: "Instagram: prima frază agață, apoi 2-4 rânduri scurte, emoji cu măsură, 3-6 hashtag-uri relevante.",
@@ -61,8 +61,11 @@ export async function runCopywriter(input: {
   format: AssetKind;
   platforms: Platform[];
   series?: SeriesContext;
+  segment?: AudienceSegment;
+  /** Indicațiile utilizatorului pentru imagine sau video; au prioritate față de stilul general. */
+  direction?: string;
 }): Promise<CopywriterResult> {
-  const { project, idea, format, platforms, series } = input;
+  const { project, idea, format, platforms, series, segment, direction } = input;
 
   const response = await claude().beta.messages.parse({
     model: MODEL,
@@ -86,9 +89,16 @@ export async function runCopywriter(input: {
           `Format: ${format === "video" ? "video scurt vertical" : format === "carousel" ? "carusel (descrie prima imagine)" : "imagine"}`,
           `Platforme: ${platforms.map((p) => platformLabels[p]).join(", ")}`,
           "",
+          segment
+            ? `Postarea e pentru segmentul ${segmentLine(segment)} Adaptează textul la tonul lor și promptul vizual la stilul lor vizual, chiar dacă diferă de stilul general al brandului.`
+            : "",
+          direction ? `Indicațiile utilizatorului pentru vizual (au prioritate): ${direction}` : "",
+          "",
           "Reguli pe platformă:",
           ...platforms.map((p) => `- ${platformGuide[p]}`),
-        ].join("\n"),
+        ]
+          .filter((l, i, all) => l !== "" || all[i - 1] !== "")
+          .join("\n"),
       },
     ],
   });

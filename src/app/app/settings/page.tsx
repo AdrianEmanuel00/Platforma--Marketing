@@ -11,7 +11,7 @@ import type { Project } from "@/lib/types";
 const roleLabels = { owner: "Owner", admin: "Admin", editor: "Editor", viewer: "Viewer" };
 
 export default function SettingsPage() {
-  const { state, dispatch, account } = useStore();
+  const { state, dispatch, account, storage } = useStore();
   const isBusiness = account === "business";
   const { workspace, members, projects } = state;
   const status = useAgentsLive();
@@ -98,7 +98,10 @@ export default function SettingsPage() {
         <section className="card p-5">
           <h2 className="mb-1 font-semibold">Datele aplicației</h2>
           <p className="mb-4 text-sm text-muted">
-            Deocamdată totul se salvează în acest browser. Poți reveni oricând la datele de exemplu ale contului.
+            {storage === "db"
+              ? "Totul se salvează în baza de date locală (fișierul .data/platforma.db din proiect)."
+              : "Totul se salvează în acest browser."}{" "}
+            Poți reveni oricând la datele de exemplu ale contului.
           </p>
           {confirmReset ? (
             <div className="flex items-center gap-2 text-sm">

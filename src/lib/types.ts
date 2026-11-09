@@ -47,6 +47,27 @@ export interface BrandKit {
   doWords: string[];
   dontWords: string[];
   visualStyle: string;
+  /** Segmentele de public, fiecare cu stilul lui (ex.: 50+ preferă imagini brute, sub 33 imagini editate). */
+  segments?: AudienceSegment[];
+}
+
+export interface AudienceSegment {
+  id: string;
+  name: string;
+  /** Cine sunt: vârstă, interese, unde stau online. */
+  who: string;
+  /** Cum trebuie să arate imaginile și video-urile pentru ei. */
+  visualStyle: string;
+  /** Cum le vorbim. */
+  tone: string;
+  platforms: Platform[];
+}
+
+export interface Competitor {
+  name: string;
+  handle: string;
+  platform: Platform;
+  website?: string;
 }
 
 export interface Project {
@@ -60,7 +81,9 @@ export interface Project {
   autopilot: boolean;
   brand: BrandKit;
   connected: Platform[];
-  competitors: { name: string; handle: string; platform: Platform }[];
+  competitors: Competitor[];
+  /** Cuvintele cheie urmărite de agentul de cuvinte cheie. */
+  keywords?: string[];
 }
 
 export interface PostVariant {
@@ -114,6 +137,8 @@ export type AgentId =
   | "copywriter"
   | "publisher"
   | "research"
+  | "keywords"
+  | "competitors"
   | "strategist"
   | "analytics"
   | "community";
@@ -146,4 +171,49 @@ export interface ContentSeries {
   nextIdeas: string[];
   learnedAt?: string;
   createdAt: string;
+}
+
+export type Trend = "up" | "down" | "flat";
+
+/** Raportul agentului de cuvinte cheie: interesul de acum comparat cu aceeași perioadă de anul trecut. */
+export interface KeywordReport {
+  id: string;
+  projectId: string;
+  date: string;
+  keywords: {
+    keyword: string;
+    /** Interes relativ, 0-100, în ultimele 4 săptămâni. */
+    interestNow: number;
+    /** Interes relativ, 0-100, în aceleași 4 săptămâni de anul trecut. */
+    interestLastYear: number;
+    trend: Trend;
+    /** Lunile în care căutările sunt de obicei la vârf. */
+    peakMonths: string[];
+    note: string;
+  }[];
+  /** Ce urmează să crească, după tiparul de anul trecut: aici câștigi dacă postezi înainte. */
+  upcoming: { when: string; topic: string; why: string; keywords: string[] }[];
+  /** Cuvinte noi pe care merită să le urmărești. */
+  suggested: string[];
+  ideas: ResearchIdea[];
+  sources?: { title: string; url: string }[];
+  sample?: boolean;
+}
+
+/** Fișa unui competitor: site, rețele, reclame și ce poți face tu mai bine. */
+export interface CompetitorDossier {
+  id: string;
+  projectId: string;
+  competitor: string;
+  date: string;
+  summary: string;
+  offers: string[];
+  channels: { platform: string; activity: string }[];
+  recentActions: string[];
+  ads: { platform: string; what: string }[];
+  strengths: string[];
+  weaknesses: string[];
+  opportunities: string[];
+  sources?: { title: string; url: string }[];
+  sample?: boolean;
 }
