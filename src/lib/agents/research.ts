@@ -2,7 +2,7 @@ import "server-only";
 import type Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
 import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
-import { claude, fallbackParams, MODEL } from "../ai/clients";
+import { claude, modelParams, webSearchTool } from "../ai/clients";
 import { brandContext } from "../ai/brand-context";
 import type { Project, ResearchReport } from "../types";
 
@@ -52,11 +52,10 @@ export async function runResearch(project: Project, today: string): Promise<Rese
   let notes = "";
   for (let turn = 0; turn < 4; turn++) {
     const stream = client.beta.messages.stream({
-      model: MODEL,
+      ...modelParams(),
       max_tokens: 32000,
-      ...fallbackParams,
       output_config: { effort: "high" },
-      tools: [{ type: "web_search_20260209", name: "web_search", max_uses: 8, user_location: { type: "approximate", country: "RO" } }],
+      tools: [webSearchTool(8)],
       messages,
     });
     const msg = await stream.finalMessage();
@@ -70,9 +69,8 @@ export async function runResearch(project: Project, today: string): Promise<Rese
   }
 
   const structured = await client.beta.messages.parse({
-    model: MODEL,
+    ...modelParams(),
     max_tokens: 16000,
-    ...fallbackParams,
     output_config: { effort: "low", format: betaZodOutputFormat(Report) },
     system: "Transformi notițele de research în raportul cerut, în română, fără să inventezi nimic în plus. Exact 3 trenduri, maxim 4 mișcări ale competitorilor, exact 5 idei.",
     messages: [{ role: "user", content: notes }],

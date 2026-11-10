@@ -50,12 +50,31 @@ Fără chei, agenții răspund cu rezultate exemplu. Cu chei, în Studio și Res
 
 | Variabilă | Ce pornește | De unde o iei |
 | --- | --- | --- |
-| `ANTHROPIC_API_KEY` | Copywriter, Research, Cuvinte cheie și Competitori (Claude Opus 5.5, cu căutare pe web) | [console.anthropic.com](https://console.anthropic.com/settings/keys) |
-| `FAL_KEY` | Creative: imaginea postării (Nano Banana Pro) | [fal.ai/dashboard/keys](https://fal.ai/dashboard/keys) |
+| `ANTHROPIC_API_KEY` | Brand, Copywriter, Research, Cuvinte cheie și Competitori (Claude, cu căutare pe web) | [console.anthropic.com](https://console.anthropic.com/settings/keys) |
+| `AI_TIER` (opțional) | Ce model Claude folosesc agenții: `economic` (implicit, Claude Haiku 5.5, cel mai ieftin), `echilibrat` (Claude Sonnet 5.5) sau `maxim` (Claude Opus 5.5) | - |
+| `IMAGE_PROVIDER` (opțional) | Cine face imaginile: `pollinations` (gratuit, fără cheie), `fal` (Nano Banana Pro, cu `FAL_KEY`) sau `higgsfield` (urmează). Implicit: `fal` dacă există `FAL_KEY`, altfel `pollinations` | - |
+| `FAL_KEY` (opțional) | Creative: imagini de calitate cu Nano Banana Pro | [fal.ai/dashboard/keys](https://fal.ai/dashboard/keys) |
+
+Fără `FAL_KEY`, imaginile se fac gratuit prin Pollinations, ca să poți testa tot fluxul fără costuri.
 
 Local le pui în `.env.local`; pe Vercel, în Settings → Environment Variables, apoi Redeploy.
 
-## Conectarea Supabase
+## Pe Vercel: date în cloud, Facebook și Instagram
+
+**Date în cloud.** Cu `NEXT_PUBLIC_SUPABASE_URL` și `SUPABASE_SERVICE_ROLE_KEY` în Vercel, datele se salvează în Supabase Storage (un bucket privat `platforma-data`, creat automat) și le vezi de pe orice dispozitiv. Nu trebuie rulat niciun SQL. Fără ele, datele rămân doar în browser.
+
+**Publicare pe Facebook și Instagram.**
+1. Pe [developers.facebook.com/apps](https://developers.facebook.com/apps) creează o aplicație de tip Business și adaugă Facebook Login.
+2. La „Valid OAuth Redirect URIs” pune `https://<adresa-ta>/api/connect/meta/callback` (adresa exactă apare și în aplicație, la Conturi conectate).
+3. Pune în Vercel `META_APP_ID` și `META_APP_SECRET`, apoi Redeploy.
+4. În aplicație: Conturi conectate → Conectează cu Facebook. Alegi pagina; Instagram-ul Business legat de ea vine automat.
+5. În Studio, „Postează acum” publică pe bune. Instagram cere o imagine.
+
+Cât timp aplicația Meta e în modul Development, merge doar pentru conturile cu rol în aplicație (tu), ceea ce ajunge pentru proiectele tale.
+
+**Parolă.** După ce conectezi conturi reale, pune `APP_PASSWORD` în Vercel: aplicația o cere o singură dată pe fiecare dispozitiv, ca nimeni altcineva cu linkul să nu poată publica pe pagina ta.
+
+## Conectarea Supabase (login, opțional)
 
 1. Creează un proiect gratuit pe [supabase.com](https://supabase.com).
 2. Rulează `supabase/migrations/0001_init.sql` în SQL Editor.

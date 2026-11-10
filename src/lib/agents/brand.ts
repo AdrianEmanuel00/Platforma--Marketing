@@ -2,7 +2,7 @@ import "server-only";
 import type Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
 import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
-import { claude, fallbackParams, MODEL } from "../ai/clients";
+import { claude, modelParams, webFetchTool } from "../ai/clients";
 
 const BrandOutput = z.object({
   colors: z.array(z.object({ name: z.string(), hex: z.string().describe("Culoare hex, de forma #RRGGBB") })),
@@ -46,11 +46,10 @@ export async function runBrandAgent(input: { name: string; industry: string; web
   for (let turn = 0; turn < 3; turn++) {
     const msg = await client.beta.messages
       .stream({
-        model: MODEL,
+        ...modelParams(),
         max_tokens: 16000,
-        ...fallbackParams,
         output_config: { effort: "medium" },
-        tools: [{ type: "web_fetch_20260209", name: "web_fetch", max_uses: 3 }],
+        tools: [webFetchTool(3)],
         messages,
       })
       .finalMessage();
@@ -61,9 +60,8 @@ export async function runBrandAgent(input: { name: string; industry: string; web
   }
 
   const structured = await client.beta.messages.parse({
-    model: MODEL,
+    ...modelParams(),
     max_tokens: 8000,
-    ...fallbackParams,
     output_config: { effort: "low", format: betaZodOutputFormat(BrandOutput) },
     system:
       "Transformi analiza de brand în identitatea cerută, în română. 3-5 culori hex valide (#RRGGBB), fonturi disponibile pe Google Fonts, 3-6 cuvinte de folosit, 2-5 cuvinte interzise.",

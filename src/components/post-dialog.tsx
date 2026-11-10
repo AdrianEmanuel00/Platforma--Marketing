@@ -1,11 +1,12 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Trash2, X } from "lucide-react";
+import { RefreshCw, Send, Trash2, X } from "lucide-react";
 import { AssetPreview } from "@/components/asset-preview";
 import { PlatformIcon } from "@/components/badges";
 import { useStore } from "@/lib/store";
 import { dayKey, platformLabels, statusLabels, timeKey, toIsoRo } from "@/lib/format";
-import type { Post, PostStatus, Project } from "@/lib/types";
+import { publishTo, realPlatforms, useConnections } from "@/lib/use-connections";
+import type { Post, PostStatus, Project, PublishLogEntry } from "@/lib/types";
 
 const editableStatuses: PostStatus[] = ["idea", "draft", "pending_approval", "approved", "scheduled", "published"];
 
@@ -20,6 +21,36 @@ export function PostDialog({ post, project, onClose }: { post: Post; project: Pr
   const [time, setTime] = useState(post.scheduledAt ? timeKey(post.scheduledAt) : "10:00");
   const [variants, setVariants] = useState(post.variants);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const { status: conn } = useConnections(project.id);
+  const targets = variants
+    .map((v) => v.platform)
+    .filter((p): p is "facebook" | "instagram" => (p === "facebook" || p === "instagram") && realPlatforms(conn).includes(p));
+  const [publishing, setPublishing] = useState(false);
+  const [log, setLog] = useState<PublishLogEntry[] | undefined>(post.publishLog);
+
+  async function publishNow() {
+    setPublishing(true);
+    const results: PublishLogEntry[] = [];
+    for (const p of targets) {
+      const v = variants.find((x) => x.platform === p)!;
+      const caption = v.hashtags.length ? `${v.caption}\n\n${v.hashtags.join(" ")}` : v.caption;
+      results.push(await publishTo(project.id, p, caption, post.imageUrl));
+    }
+    setPublishing(false);
+    setLog(results);
+    const ok = results.some((r) => r.ok);
+    if (ok) setStatus("published");
+    dispatch({
+      type: "updatePost",
+      id: post.id,
+      patch: {
+        variants,
+        publishLog: results,
+        status: ok ? "published" : "failed",
+        scheduledAt: ok ? new Date().toISOString() : post.scheduledAt,
+      },
+    });
+  }
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -139,6 +170,27 @@ export function PostDialog({ post, project, onClose }: { post: Post; project: Pr
           </p>
         )}
 
+        {log && log.length > 0 && (
+          <ul className="mt-4 space-y-1 text-xs">
+            {log.map((r) => (
+              <li key={r.platform} className={r.ok ? "text-emerald-700 dark:text-emerald-400" : "text-red-600"}>
+                {platformLabels[r.platform]}:{" "}
+                {r.ok ? (
+                  r.url ? (
+                    <a className="underline" href={r.url} target="_blank" rel="noreferrer">
+                      publicat, vezi postarea
+                    </a>
+                  ) : (
+                    "publicat"
+                  )
+                ) : (
+                  r.error
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+
         <div className="mt-6 flex flex-col-reverse gap-2 border-t border-border pt-4 sm:flex-row sm:items-center">
           {confirmDelete ? (
             <div className="flex items-center gap-2 text-sm">
@@ -162,6 +214,12 @@ export function PostDialog({ post, project, onClose }: { post: Post; project: Pr
             </button>
           )}
           <div className="flex gap-2 sm:ml-auto">
+            {targets.length > 0 && post.status !== "published" && (
+              <button onClick={publishNow} disabled={publishing} className="btn-ghost flex-1 sm:flex-none">
+                {publishing ? <RefreshCw size={16} className="animate-spin" /> : <Send size={16} />}
+                {publishing ? "Se publică..." : `Publică acum pe ${targets.map((p) => platformLabels[p]).join(" și ")}`}
+              </button>
+            )}
             <button onClick={onClose} className="btn-ghost flex-1 sm:flex-none">
               Renunță
             </button>

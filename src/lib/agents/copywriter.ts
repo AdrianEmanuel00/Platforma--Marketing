@@ -1,7 +1,7 @@
 import "server-only";
 import { z } from "zod";
 import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
-import { claude, fallbackParams, MODEL } from "../ai/clients";
+import { claude, modelParams } from "../ai/clients";
 import { brandContext, segmentLine } from "../ai/brand-context";
 import { platformLabels } from "../format";
 import type { AssetKind, AudienceSegment, Platform, Project } from "../types";
@@ -68,9 +68,8 @@ export async function runCopywriter(input: {
   const { project, idea, format, platforms, series, segment, direction } = input;
 
   const response = await claude().beta.messages.parse({
-    model: MODEL,
+    ...modelParams(),
     max_tokens: 16000,
-    ...fallbackParams,
     output_config: { effort: "high", format: betaZodOutputFormat(Output) },
     system: [
       "Ești copywriterul unei agenții de social media din România. Scrii în română corectă, cu diacritice.",

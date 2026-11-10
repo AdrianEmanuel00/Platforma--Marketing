@@ -109,6 +109,16 @@ export interface Post {
   /** Seria de conținut din care face parte. */
   seriesId?: string;
   metrics?: { reach: number; likes: number; comments: number; shares: number };
+  /** Rezultatul publicării reale, pe fiecare platformă. */
+  publishLog?: PublishLogEntry[];
+}
+
+export interface PublishLogEntry {
+  platform: Platform;
+  ok: boolean;
+  at: string;
+  url?: string;
+  error?: string;
 }
 
 export interface ResearchIdea {

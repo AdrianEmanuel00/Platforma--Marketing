@@ -1,7 +1,7 @@
 import "server-only";
 import { z } from "zod";
 import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
-import { claude, fallbackParams, MODEL } from "../ai/clients";
+import { claude, modelParams } from "../ai/clients";
 import { brandContext } from "../ai/brand-context";
 import type { Project } from "../types";
 
@@ -30,9 +30,8 @@ export async function runSeriesCoach(input: {
 }): Promise<SeriesCoachResult> {
   const { project, series, history } = input;
   const response = await claude().beta.messages.parse({
-    model: MODEL,
+    ...modelParams(),
     max_tokens: 8000,
-    ...fallbackParams,
     output_config: { effort: "medium", format: betaZodOutputFormat(Output) },
     system: [
       "Ești agentul unei serii de conținut pe social media. Rolul tău e să înveți din istoricul seriei ce funcționează.",
