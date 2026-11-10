@@ -50,8 +50,12 @@ Fără chei, agenții răspund cu rezultate exemplu. Cu chei, în Studio și Res
 
 | Variabilă | Ce pornește | De unde o iei |
 | --- | --- | --- |
-| `ANTHROPIC_API_KEY` | Copywriter, Research, Cuvinte cheie și Competitori (Claude Opus 5.5, cu căutare pe web) | [console.anthropic.com](https://console.anthropic.com/settings/keys) |
-| `FAL_KEY` | Creative: imaginea postării (Nano Banana Pro) | [fal.ai/dashboard/keys](https://fal.ai/dashboard/keys) |
+| `ANTHROPIC_API_KEY` | Brand, Copywriter, Research, Cuvinte cheie și Competitori (Claude, cu căutare pe web) | [console.anthropic.com](https://console.anthropic.com/settings/keys) |
+| `AI_TIER` (opțional) | Ce model Claude folosesc agenții: `economic` (implicit, Claude Haiku 5.5, cel mai ieftin), `echilibrat` (Claude Sonnet 5.5) sau `maxim` (Claude Opus 5.5) | - |
+| `IMAGE_PROVIDER` (opțional) | Cine face imaginile: `pollinations` (gratuit, fără cheie), `fal` (Nano Banana Pro, cu `FAL_KEY`) sau `higgsfield` (urmează). Implicit: `fal` dacă există `FAL_KEY`, altfel `pollinations` | - |
+| `FAL_KEY` (opțional) | Creative: imagini de calitate cu Nano Banana Pro | [fal.ai/dashboard/keys](https://fal.ai/dashboard/keys) |
+
+Fără `FAL_KEY`, imaginile se fac gratuit prin Pollinations, ca să poți testa tot fluxul fără costuri.
 
 Local le pui în `.env.local`; pe Vercel, în Settings → Environment Variables, apoi Redeploy.
 

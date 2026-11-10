@@ -2,7 +2,7 @@ import "server-only";
 import type Anthropic from "@anthropic-ai/sdk";
 import type { z } from "zod";
 import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
-import { claude, fallbackParams, MODEL } from "../ai/clients";
+import { claude, modelParams, webSearchTool } from "../ai/clients";
 
 /**
  * Tiparul comun al agenților care caută pe web:
@@ -21,18 +21,10 @@ export async function searchThenStructure<T extends z.ZodType>(opts: {
   let notes = "";
   for (let turn = 0; turn < 4; turn++) {
     const stream = client.beta.messages.stream({
-      model: MODEL,
+      ...modelParams(),
       max_tokens: 32000,
-      ...fallbackParams,
       output_config: { effort: "high" },
-      tools: [
-        {
-          type: "web_search_20260209",
-          name: "web_search",
-          max_uses: opts.maxSearches ?? 8,
-          user_location: { type: "approximate", country: "RO" },
-        },
-      ],
+      tools: [webSearchTool(opts.maxSearches ?? 8)],
       messages,
     });
     const msg = await stream.finalMessage();
@@ -56,9 +48,8 @@ export async function searchThenStructure<T extends z.ZodType>(opts: {
   }
 
   const structured = await client.beta.messages.parse({
-    model: MODEL,
+    ...modelParams(),
     max_tokens: 16000,
-    ...fallbackParams,
     output_config: { effort: "low", format: betaZodOutputFormat(opts.schema) },
     system: `Transformi notițele de research în structura cerută, în română, fără să inventezi nimic în plus. ${opts.structureInstructions}`,
     messages: [{ role: "user", content: notes }],
