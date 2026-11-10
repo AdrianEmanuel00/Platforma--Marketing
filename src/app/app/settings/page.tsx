@@ -10,6 +10,8 @@ import type { Project } from "@/lib/types";
 
 const roleLabels = { owner: "Owner", admin: "Admin", editor: "Editor", viewer: "Viewer" };
 
+const TIER_LABEL = { economic: "economic", echilibrat: "echilibrat", maxim: "calitate maximă" } as const;
+
 export default function SettingsPage() {
   const { state, dispatch, account, storage } = useStore();
   const isBusiness = account === "business";
@@ -45,9 +47,17 @@ export default function SettingsPage() {
               ● Text (Anthropic): {status === null ? "verific..." : status.anthropic ? "activ" : "lipsește ANTHROPIC_API_KEY"}
             </span>
             <br />
-            <span className={status?.fal ? "text-emerald-600" : "text-amber-600"}>
-              ● Imagini (fal): {status === null ? "verific..." : status.fal ? "activ" : "lipsește FAL_KEY"}
+            <span className={status?.imageReady ? "text-emerald-600" : "text-amber-600"}>
+              ● Imagini ({status?.imageProvider ?? "..."}): {status === null ? "verific..." : status.imageReady ? "activ" : "lipsește cheia furnizorului"}
             </span>
+            {status?.tier && (
+              <>
+                <br />
+                <span className="text-muted">
+                  Nivel text: <b>{TIER_LABEL[status.tier]}</b> ({status.textModel}). Se schimbă din variabila AI_TIER pe Vercel.
+                </span>
+              </>
+            )}
           </p>
           <ul className="divide-y divide-border">
             {agents.map((a) => (
@@ -55,7 +65,11 @@ export default function SettingsPage() {
                 <div className="flex items-center gap-2">
                   <p className="font-medium">{a.name}</p>
                   <StageBadge stage={a.stage} />
-                  <span className="ml-auto truncate font-mono text-xs text-muted">{a.primary.model}</span>
+                  <span className="ml-auto truncate font-mono text-xs text-muted">
+                    {a.primary.provider === "anthropic"
+                      ? (status?.textModel ?? a.primary.model)
+                      : (status?.imageModel ?? a.primary.model)}
+                  </span>
                 </div>
                 <p className="mt-0.5 text-xs text-muted">{a.tagline}</p>
               </li>

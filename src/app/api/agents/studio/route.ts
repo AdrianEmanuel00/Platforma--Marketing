@@ -45,7 +45,7 @@ export async function POST(req: Request) {
     let image: { url: string; model: string } | null = null;
     let imageError: string | null = null;
     if (withImage) {
-      if (!keys.fal) imageError = "Lipsește FAL_KEY, așa că imaginea nu a fost generată.";
+      if (!keys.imageReady) imageError = `Furnizorul de imagini „${keys.imageProvider}” nu are cheia setată, așa că imaginea nu a fost generată.`;
       else {
         try {
           image = await runCreative({ visualPrompt: copy.visualPrompt, overlayText: copy.overlayText, format, platforms });

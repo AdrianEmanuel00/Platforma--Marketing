@@ -432,7 +432,7 @@ export function StudioEditor({
         </button>
         {live && (
           <p className="text-xs font-medium text-emerald-600">
-            ● Claude Opus 5.5 pentru text, Nano Banana Pro pentru imagine
+            ● {status?.textModel ?? "Claude"} pentru text, {status?.imageModel ?? "generatorul de imagini"} pentru imagine
           </p>
         )}
         {error && (
