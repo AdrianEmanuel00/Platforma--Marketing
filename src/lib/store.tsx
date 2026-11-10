@@ -186,12 +186,15 @@ function reducer(state: AppState, action: Action): AppState {
   }
 }
 
+/** Unde se salvează datele. */
+export type StorageKind = "cloud" | "local" | "browser";
+
 interface StoreValue {
   state: AppState;
   hydrated: boolean;
   account: AccountId;
   /** Unde se salvează datele: în baza locală sau doar în browser. */
-  storage: "db" | "browser";
+  storage: StorageKind;
   dispatch: (a: Action) => void;
 }
 
@@ -202,8 +205,8 @@ export function StoreProvider({ children, onNoAccount }: { children: React.React
   const [hydrated, setHydrated] = useState(false);
   const [account, setAccount] = useState<AccountId>("agency");
 
-  // Unde se salvează: "db" = baza locală SQLite, "browser" = doar localStorage.
-  const [storage, setStorage] = useState<"db" | "browser">("browser");
+  // Unde se salvează: "cloud" = Supabase, "local" = baza SQLite de pe calculator, "browser" = doar localStorage.
+  const [storage, setStorage] = useState<StorageKind>("browser");
   const dbReady = useRef(false);
   // Forțează o salvare în bază chiar dacă starea nu s-a schimbat (prima sincronizare).
   const [dbDirty, setDbDirty] = useState(0);
@@ -231,12 +234,12 @@ export function StoreProvider({ children, onNoAccount }: { children: React.React
     // Baza locală are ultimul cuvânt; dacă e goală, îi dăm ce era în browser.
     fetch(`/api/state?account=${acc}`, { signal: AbortSignal.timeout(4000) })
       .then((r) => r.json())
-      .then((data: { enabled?: boolean; state?: unknown }) => {
+      .then((data: { enabled?: boolean; backend?: string; state?: unknown }) => {
         if (cancelled || !data.enabled) return;
         const fromDb = data.state ? upgrade(data.state, acc) : null;
         if (fromDb) dispatch({ type: "load", state: fromDb });
         dbReady.current = true;
-        setStorage("db");
+        setStorage(data.backend === "supabase" ? "cloud" : "local");
         if (!fromDb) setDbDirty((n) => n + 1);
       })
       .catch(() => {})

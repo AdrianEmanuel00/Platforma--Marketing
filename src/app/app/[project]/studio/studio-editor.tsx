@@ -27,12 +27,14 @@ import {
 import { newId, useLogRun, useProjectData, useStore } from "@/lib/store";
 import { seriesContext, useSeriesLearner } from "@/lib/use-series-learner";
 import { useAgentsLive } from "@/lib/use-agents-live";
+import { publishTo, realPlatforms, useConnections } from "@/lib/use-connections";
 import type {
   AssetKind,
   Platform,
   Post,
   PostStatus,
   Project,
+  PublishLogEntry,
   ResearchIdea,
 } from "@/lib/types";
 
@@ -107,9 +109,13 @@ export function StudioEditor({
   const [visualPrompt, setVisualPrompt] = useState("");
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
+  const { status: conn } = useConnections(project.id);
+  const real = realPlatforms(conn);
+  const [publishing, setPublishing] = useState(false);
   const [saved, setSaved] = useState<{
     status: PostStatus;
     when?: string;
+    log?: PublishLogEntry[];
   } | null>(null);
   const [sample, setSample] = useState(false);
   const segments = project.brand.segments ?? [];
@@ -202,8 +208,22 @@ export function StudioEditor({
     }
   }
 
-  function save(status: PostStatus) {
+  async function save(status: PostStatus) {
     if (!draft) return;
+    // „Postează acum” publică pe bune pe platformele conectate (Facebook, Instagram).
+    let publishLog: PublishLogEntry[] | undefined;
+    if (status === "published") {
+      const targets = selected.filter(
+        (p): p is "facebook" | "instagram" => real.includes(p) && draft[p] !== undefined && (p === "facebook" || p === "instagram"),
+      );
+      if (targets.length) {
+        setPublishing(true);
+        publishLog = [];
+        for (const p of targets) publishLog.push(await publishTo(project.id, p, draft[p]!, imageUrl ?? undefined));
+        setPublishing(false);
+        if (publishLog.every((r) => !r.ok)) status = "failed";
+      }
+    }
     const scheduledAt =
       status === "scheduled"
         ? toIsoRo(day, time)
@@ -221,12 +241,13 @@ export function StudioEditor({
       imageUrl: imageUrl ?? undefined,
       visualPrompt: visualPrompt || undefined,
       seriesId: currentSeries?.id,
+      publishLog,
       variants: selected
         .filter((p) => draft[p] !== undefined)
         .map((p) => ({ platform: p, caption: draft[p]!, hashtags: [] })),
     };
     dispatch({ type: "addPost", post });
-    setSaved({ status, when: scheduledAt });
+    setSaved({ status, when: scheduledAt, log: publishLog });
     // Agentul seriei învață și din postarea nouă (în fundal, doar cu cheile AI).
     if (currentSeries && live)
       learnSeries(project, currentSeries, [...posts, post]).catch(() => {});
@@ -240,9 +261,14 @@ export function StudioEditor({
     draft: "Salvat ca draft. Îl găsești în calendar, la „Neprogramate”.",
     pending_approval: "Trimis la aprobare. Apare în calendar și pe dashboard.",
     scheduled: `Programat pentru ${saved?.when ? formatDateTime(saved.when) : ""}.`,
-    published:
-      "Marcat ca publicat. Publicarea reală pornește când conectăm conturile sociale.",
+    published: saved?.log?.length
+      ? saved.log.every((r) => r.ok)
+        ? "Publicat."
+        : "Publicat doar pe o parte din platforme."
+      : "Marcat ca publicat. Conectează Facebook și Instagram din „Conturi conectate” ca să publici direct de aici.",
+    failed: "Publicarea a eșuat. Postarea e salvată în calendar, poți încerca din nou.",
   };
+  const manualOnly = selected.filter((p) => !real.includes(p));
 
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
@@ -526,7 +552,28 @@ export function StudioEditor({
 
             {saved ? (
               <div className="flex flex-col gap-3 rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800 sm:flex-row sm:items-center dark:bg-emerald-950 dark:text-emerald-300">
-                <p className="flex-1">{savedMessage[saved.status]}</p>
+                <div className="flex-1 space-y-1">
+                  <p>{savedMessage[saved.status]}</p>
+                  {saved.log?.map((r) => (
+                    <p key={r.platform} className={r.ok ? "" : "text-red-700 dark:text-red-300"}>
+                      {platformLabels[r.platform]}:{" "}
+                      {r.ok ? (
+                        r.url ? (
+                          <a href={r.url} target="_blank" rel="noreferrer" className="underline">
+                            vezi postarea
+                          </a>
+                        ) : (
+                          "publicat"
+                        )
+                      ) : (
+                        r.error
+                      )}
+                    </p>
+                  ))}
+                  {saved.log && saved.log.length > 0 && manualOnly.length > 0 && (
+                    <p className="text-xs">Pe {manualOnly.map((p) => platformLabels[p]).join(", ")} publici manual (încă neconectate).</p>
+                  )}
+                </div>
                 <div className="flex gap-2">
                   <Link
                     href={`/app/${project.slug}/calendar`}
@@ -585,9 +632,12 @@ export function StudioEditor({
                   </button>
                   <button
                     onClick={() => save("published")}
+                    disabled={publishing}
                     className="btn-ghost sm:ml-auto"
+                    title={real.length ? `Publică pe ${real.map((p) => platformLabels[p]).join(" și ")}` : "Marchează ca publicat"}
                   >
-                    <Send size={16} /> Postează acum
+                    {publishing ? <RefreshCw size={16} className="animate-spin" /> : <Send size={16} />}
+                    {publishing ? "Se publică..." : "Postează acum"}
                   </button>
                 </div>
               </div>

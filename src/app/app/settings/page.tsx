@@ -112,9 +112,11 @@ export default function SettingsPage() {
         <section className="card p-5">
           <h2 className="mb-1 font-semibold">Datele aplicației</h2>
           <p className="mb-4 text-sm text-muted">
-            {storage === "db"
-              ? "Totul se salvează în baza de date locală (fișierul .data/platforma.db din proiect)."
-              : "Totul se salvează în acest browser."}{" "}
+            {storage === "cloud"
+              ? "Totul se salvează în cloud (Supabase), deci vezi aceleași date de pe orice dispozitiv."
+              : storage === "local"
+                ? "Totul se salvează în baza de date locală (fișierul .data/platforma.db din proiect)."
+                : "Totul se salvează doar în acest browser. Adaugă cheile Supabase în Vercel ca datele să fie în cloud."}{" "}
             Poți reveni oricând la datele de exemplu ale contului.
           </p>
           {confirmReset ? (
